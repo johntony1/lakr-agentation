@@ -16,14 +16,5 @@
 		"remotion",
 		"demo",
 		"lakr"
-	],
-	"userConfig": {
-		"lakr_token": {
-			"type": "string",
-			"title": "Lakr token (optional)",
-			"description": "Only for CI or machines without a browser. Leave empty: the skill signs in to Lakr through your browser the first time you use sounds or music.",
-			"sensitive": true,
-			"required": false
-		}
-	}
+	]
 }

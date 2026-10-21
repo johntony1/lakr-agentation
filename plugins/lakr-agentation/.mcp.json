@@ -8,8 +8,7 @@
 			],
 			"env": {
 				"LAKR_PROJECT": "${CLAUDE_PROJECT_DIR}",
-				"LAKR_DATA": "${CLAUDE_PLUGIN_DATA}",
-				"LAKR_TOKEN": "${user_config.lakr_token}"
+				"LAKR_DATA": "${CLAUDE_PLUGIN_DATA}"
 			}
 		}
 	}
