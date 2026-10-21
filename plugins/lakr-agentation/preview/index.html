@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lakr Preview</title>
+<style>
+:root {
+	--bg: #0e0e10; --panel: #151518; --raise: #1c1c20; --line: rgba(255,255,255,0.08); --line-2: rgba(255,255,255,0.14);
+	--ink: #f3f3f1; --sub: #a1a1a6; --faint: #6c6c72; --accent: #ff6a3d; --accent-soft: rgba(255,106,61,0.14);
+	--good: #3ecf8e; --bad: #ff5a5f; --radius: 10px;
+	--font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+	--mono: ui-monospace, "SF Mono", Menlo, monospace;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font: 13px/1.45 var(--font); -webkit-font-smoothing: antialiased; }
+button { font: inherit; color: inherit; }
+.app { display: grid; grid-template-rows: 48px 1fr auto; height: 100vh; }
+
+header { display: flex; align-items: center; gap: 12px; padding: 0 16px; border-bottom: 1px solid var(--line); }
+.mark { display: flex; align-items: center; gap: 8px; font-weight: 600; letter-spacing: -0.01em; }
+.mark i { width: 14px; height: 14px; border-radius: 4px; background: var(--accent); display: block; }
+.film-name { color: var(--sub); padding-left: 12px; border-left: 1px solid var(--line-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.status { margin-left: auto; display: flex; align-items: center; gap: 8px; color: var(--sub); min-width: 0; }
+.status span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 46vw; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); flex: none; }
+.dot.live { background: var(--good); box-shadow: 0 0 0 3px rgba(62,207,142,0.15); }
+.dot.busy { background: var(--accent); animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: 0.35; } }
+
+main { display: grid; grid-template-columns: 1fr 300px; min-height: 0; }
+.stage { display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: 16px; gap: 12px; }
+.frame-wrap { flex: 1; min-height: 0; display: grid; place-items: center; position: relative; }
+.frame { position: relative; background: #000; border-radius: 8px; overflow: hidden; box-shadow: 0 0 0 1px var(--line), 0 20px 60px rgba(0,0,0,0.45); }
+.frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; }
+.empty { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; color: var(--sub); padding: 24px; }
+[hidden] { display: none !important; }
+.empty b { display: block; color: var(--ink); font-size: 15px; margin-bottom: 4px; font-weight: 600; }
+
+.transport { display: flex; align-items: center; gap: 12px; }
+.play { width: 34px; height: 34px; border-radius: 50%; border: 0; background: var(--ink); color: #111; display: grid; place-items: center; cursor: pointer; flex: none; }
+.play svg { width: 14px; height: 14px; }
+.time { font: 12px var(--mono); color: var(--sub); min-width: 112px; }
+.hint { color: var(--faint); margin-left: auto; font-size: 12px; text-align: right; }
+
+aside { border-left: 1px solid var(--line); padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
+aside h3 { margin: 0 0 8px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--faint); }
+.brief { color: var(--sub); white-space: pre-wrap; }
+.notes { display: flex; flex-direction: column; gap: 8px; }
+.note { background: var(--raise); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; position: relative; }
+.note .el { font: 11px var(--mono); color: var(--accent); margin-bottom: 3px; padding-right: 22px; overflow-wrap: anywhere; }
+.note .state { font-size: 11px; color: var(--faint); margin-top: 4px; }
+.note .x { position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; border: 0; border-radius: 6px; background: transparent; color: var(--faint); cursor: pointer; }
+.note .x:hover { background: var(--line); color: var(--ink); }
+.callout { background: var(--accent-soft); border: 1px solid rgba(255,106,61,0.35); border-radius: var(--radius); padding: 10px 12px; }
+.callout code { display: block; margin-top: 6px; font: 12px var(--mono); color: var(--ink); }
+.copy { margin-top: 8px; border: 1px solid var(--line-2); background: transparent; border-radius: 7px; padding: 4px 10px; cursor: pointer; color: var(--ink); }
+.muted { color: var(--faint); }
+.renders a { color: var(--ink); display: block; padding: 4px 0; text-decoration: none; overflow-wrap: anywhere; }
+.renders a:hover { color: var(--accent); }
+
+.timeline { border-top: 1px solid var(--line); background: var(--panel); padding: 10px 16px 14px; position: relative; user-select: none; }
+.ruler { position: relative; height: 18px; margin-left: 88px; font: 10px var(--mono); color: var(--faint); cursor: pointer; }
+.ruler span { position: absolute; top: 2px; transform: translateX(-50%); }
+.tracks { display: flex; flex-direction: column; gap: 6px; }
+.track { display: flex; align-items: stretch; gap: 8px; min-height: 46px; }
+.track .label { width: 80px; flex: none; color: var(--faint); font-size: 11px; display: flex; align-items: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lane { position: relative; flex: 1; background: rgba(255,255,255,0.025); border-radius: 7px; cursor: pointer; }
+.track.audio { min-height: 26px; }
+.clip { position: absolute; top: 3px; bottom: 3px; border-radius: 6px; background: var(--raise); border: 1px solid var(--line-2); padding: 5px 8px; line-height: 1.3; overflow: hidden; cursor: pointer; transition: border-color .15s, background .15s; }
+.clip:hover { border-color: rgba(255,255,255,0.3); }
+.clip b { display: block; font-size: 11.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.clip small { display: block; font-size: 10.5px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.clip.pending { background: transparent; border-style: dashed; color: var(--sub); }
+.clip.broken { border-color: var(--bad); background: rgba(255,90,95,0.1); }
+.clip.fresh { animation: land .7s cubic-bezier(.16,1,.3,1); }
+@keyframes land { from { background: var(--accent-soft); border-color: var(--accent); } }
+.clip.audio { background: rgba(62,207,142,0.12); border-color: rgba(62,207,142,0.3); top: 2px; bottom: 2px; padding: 2px 6px; }
+.clip.media { background: rgba(122,140,255,0.14); border-color: rgba(122,140,255,0.35); }
+.playhead { position: absolute; top: 10px; bottom: 10px; width: 2px; background: var(--accent); border-radius: 1px; pointer-events: none; z-index: 3; }
+.playhead::before { content: ""; position: absolute; top: -2px; left: -4px; width: 10px; height: 10px; border-radius: 3px; background: var(--accent); }
+
+.composer { position: fixed; z-index: 10; width: 320px; background: var(--raise); border: 1px solid var(--line-2); border-radius: 12px; padding: 10px; box-shadow: 0 16px 48px rgba(0,0,0,0.5); display: none; }
+.composer.show { display: block; animation: pop .22s cubic-bezier(.16,1,.3,1); }
+@keyframes pop { from { opacity: 0; transform: translateY(4px) scale(.98); } }
+.composer .what { font: 11px var(--mono); color: var(--accent); margin: 0 2px 6px; overflow-wrap: anywhere; }
+.composer textarea { width: 100%; min-height: 64px; resize: vertical; background: var(--bg); color: var(--ink); border: 1px solid var(--line-2); border-radius: 8px; padding: 8px 10px; font: inherit; outline: none; }
+.composer textarea:focus { border-color: var(--accent); }
+.composer .row { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; gap: 8px; }
+.send { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 6px 12px; font-weight: 600; cursor: pointer; }
+.send:disabled { opacity: .5; cursor: default; }
+.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--raise); border: 1px solid var(--line-2); padding: 8px 14px; border-radius: 9px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 20; }
+.toast.show { opacity: 1; }
+
+@media (max-width: 860px) {
+	main { grid-template-columns: 1fr; }
+	aside { border-left: 0; border-top: 1px solid var(--line); max-height: 34vh; }
+	.hint { display: none; }
+	.track .label { width: 54px; } .ruler { margin-left: 62px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+	<header>
+		<div class="mark"><i></i>Lakr</div>
+		<div class="film-name" id="filmName"></div>
+		<div class="status"><span class="dot" id="dot"></span><span id="status">Connecting…</span></div>
+	</header>
+	<main>
+		<section class="stage">
+			<div class="frame-wrap" id="wrap">
+				<div class="frame" id="frame"><iframe id="player" src="/player/index.html" title="Film"></iframe>
+					<div class="empty" id="empty"><div><b>Waiting for your agent</b>Ask it to make a film with Lakr. It appears here as it's built.</div></div>
+				</div>
+			</div>
+			<div class="transport">
+				<button class="play" id="play" aria-label="Play"><svg viewBox="0 0 14 14" id="playIcon"><path d="M3 1.8v10.4L12 7z" fill="currentColor"/></svg></button>
+				<div class="time" id="time">0:00.0 / 0:00.0</div>
+				<div class="hint">Pause, click anything in the film, and say what should change.</div>
+			</div>
+		</section>
+		<aside>
+			<div><h3>Brief</h3><div class="brief" id="brief"><span class="muted">Your agent writes the brief before it plans the film.</span></div></div>
+			<div><h3>Notes for your agent</h3><div class="notes" id="notes"></div></div>
+			<div class="renders" id="rendersBox" hidden><h3>Renders</h3><div id="renders"></div></div>
+		</aside>
+	</main>
+	<section class="timeline" id="timeline">
+		<div class="ruler" id="ruler"></div>
+		<div class="tracks" id="tracks"></div>
+		<div class="playhead" id="playhead" hidden></div>
+	</section>
+</div>
+<div class="composer" id="composer">
+	<div class="what" id="what"></div>
+	<textarea id="words" placeholder="What should change? e.g. make this orange and bigger"></textarea>
+	<div class="row"><span class="muted">Enter to send · Esc to close</span><button class="send" id="send">Leave note</button></div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+(() => {
+	const $ = (id) => document.getElementById(id);
+	const player = $('player');
+	let state = null, film = null, fps = 30, total = 0, frame = 0, playing = false, ready = false, lastFilm = '', selected = null;
+	const fresh = new Set(), broken = new Set();
+	const lakr = () => player.contentWindow && player.contentWindow.lakr;
+	const fmt = (s) => { s = Math.max(0, s); const m = Math.floor(s / 60); return m + ':' + (s - m * 60).toFixed(1).padStart(4, '0'); };
+	const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+	const toast = (t) => { const el = $('toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 2200); };
+
+	// the picture keeps the film's aspect and fills what space there is
+	const fit = () => {
+		if (!film) return;
+		const W = $('wrap').clientWidth, H = $('wrap').clientHeight, a = film.width / film.height;
+		const w = Math.min(W, H * a), h = w / a;
+		$('frame').style.width = w + 'px'; $('frame').style.height = h + 'px';
+	};
+	new ResizeObserver(fit).observe($('wrap'));
+
+	const setStatus = (words, kind) => { $('status').textContent = words; $('dot').className = 'dot ' + (kind || ''); };
+
+	async function pull() {
+		const r = await fetch('/api/film', { cache: 'no-store' });
+		state = await r.json();
+		$('filmName').textContent = state.name || '';
+		document.title = state.name ? state.name + ' · Lakr Preview' : 'Lakr Preview';
+		$('brief').innerHTML = state.brief ? esc(state.brief) : '<span class="muted">Your agent writes the brief before it plans the film.</span>';
+		drawNotes(); drawRenders();
+		if (!state.film) { film = null; $('empty').hidden = false; drawTimeline(); return; }
+		const before = film;
+		film = state.film; fps = film.fps; total = state.duration || 0;
+		$('empty').hidden = total > 0;
+		fit();
+		// clips that just got code flash as they land
+		if (before) {
+			const old = new Map(before.tracks.flatMap((t) => t.clips.map((c) => [c.id, JSON.stringify(c) + JSON.stringify(c.module ? before.modules[c.module] : null)])));
+			for (const t of film.tracks) for (const c of t.clips) {
+				const now = JSON.stringify(c) + JSON.stringify(c.module ? film.modules[c.module] : null);
+				if (!c.pending && old.get(c.id) !== now) fresh.add(c.id);
+			}
+		}
+		const key = JSON.stringify(film);
+		if (key !== lastFilm && ready) {
+			lastFilm = key;
+			broken.clear();
+			const keep = Math.min(frame, Math.max(0, Math.round(total * fps) - 1));
+			lakr().setTimeline(film);
+			setTimeout(() => { lakr().seek(keep); }, 60);
+		}
+		drawTimeline();
+		setTimeout(() => fresh.clear(), 900);
+	}
+
+	function drawTimeline() {
+		const tracks = $('tracks'), ruler = $('ruler');
+		tracks.innerHTML = ''; ruler.innerHTML = '';
+		if (!film || !total) { $('playhead').hidden = true; return; }
+		const step = total > 60 ? 10 : total > 20 ? 5 : total > 8 ? 2 : 1;
+		for (let s = 0; s <= total + 0.001; s += step) ruler.insertAdjacentHTML('beforeend', `<span style="left:${(s / total) * 100}%">${s}s</span>`);
+		for (const t of film.tracks) {
+			if (!t.clips.length) continue;
+			const row = document.createElement('div');
+			row.className = 'track' + (t.kind === 'audio' ? ' audio' : '');
+			row.innerHTML = `<div class="label" title="${esc(t.name || t.id)}">${esc(t.name || t.id)}</div><div class="lane"></div>`;
+			const lane = row.lastChild;
+			for (const c of t.clips) {
+				const el = document.createElement('div');
+				const kind = c.pending ? ' pending' : c.kind === 'audio' ? ' audio' : (c.kind === 'image' || c.kind === 'recording') ? ' media' : '';
+				el.className = 'clip' + kind + (broken.has(c.id) ? ' broken' : '') + (fresh.has(c.id) ? ' fresh' : '');
+				el.style.left = (c.startSec / total) * 100 + '%';
+				el.style.width = `calc(${(c.durationSec / total) * 100}% - 2px)`;
+				el.title = (c.name || c.id) + (c.note ? '\n' + c.note : '');
+				el.innerHTML = `<b>${esc(c.name || c.id)}</b>` + (t.kind === 'audio' ? '' : `<small>${esc(c.pending ? (c.note || 'Writing…') : (c.note || c.id))}</small>`);
+				el.onclick = (e) => { e.stopPropagation(); seekSec(c.startSec + Math.min(0.4, c.durationSec / 3)); };
+				lane.appendChild(el);
+			}
+			lane.onclick = (e) => { const r = lane.getBoundingClientRect(); seekSec(((e.clientX - r.left) / r.width) * total); };
+			tracks.appendChild(row);
+		}
+		ruler.onclick = (e) => { const r = ruler.getBoundingClientRect(); seekSec(((e.clientX - r.left) / r.width) * total); };
+		movePlayhead();
+	}
+
+	function movePlayhead() {
+		const ph = $('playhead'), ruler = $('ruler');
+		if (!film || !total) { ph.hidden = true; return; }
+		ph.hidden = false;
+		const r = ruler.getBoundingClientRect(), box = $('timeline').getBoundingClientRect();
+		ph.style.left = (r.left - box.left + (frame / fps / total) * r.width - 1) + 'px';
+		$('time').textContent = fmt(frame / fps) + ' / ' + fmt(total);
+	}
+
+	const seekSec = (s) => { if (!ready || !film) return; closeComposer(); lakr().pause(); frame = Math.max(0, Math.min(Math.round(s * fps), Math.round(total * fps) - 1)); lakr().seek(frame); movePlayhead(); };
+
+	function drawNotes() {
+		const box = $('notes'), notes = (state && state.notes) || [];
+		if (!notes.length) { box.innerHTML = '<div class="muted">None yet. Pause the film and click an element to leave one.</div>'; return; }
+		box.innerHTML = notes.map((n) => `<div class="note"><div class="el">${esc(n.element || (n.clip ? 'clip ' + n.clip : 'film'))}${n.atSec != null ? ' · ' + n.atSec + 's' : ''}</div>${esc(n.words)}<div class="state">${n.state === 'taken' ? 'Your agent is on it' : 'Waiting for your agent'}</div><button class="x" data-id="${n.id}" title="Remove">✕</button></div>`).join('')
+			+ (notes.some((n) => n.state === 'new') ? `<div class="callout">Tell your agent:<code>Apply my Lakr notes</code><button class="copy" id="copyAsk">Copy</button></div>` : '');
+		box.querySelectorAll('.x').forEach((b) => (b.onclick = async () => { await fetch('/api/notes/' + b.dataset.id, { method: 'DELETE' }); pull(); }));
+		const c = $('copyAsk'); if (c) c.onclick = () => navigator.clipboard.writeText('Apply my Lakr notes').then(() => toast('Copied. Paste it to your agent.'));
+	}
+
+	function drawRenders() {
+		const list = (state && state.renders) || [];
+		$('rendersBox').hidden = !list.length;
+		$('renders').innerHTML = list.map((r) => { const name = r.file.replace(/^renders\//, ''); return `<a href="/renders/${encodeURIComponent(name)}" target="_blank">${esc(name)}</a>`; }).join('');
+	}
+
+	// ── click an element, say what to change ──
+	function openComposer(m) {
+		const key = m.keys[0];
+		const doc = player.contentDocument;
+		const el = doc && doc.querySelector('[data-lakr="' + CSS.escape(key) + '"]');
+		const words = el ? (el.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 80) : '';
+		selected = { element: key, clip: key.split(':')[0], atSec: Math.round((m.frame / fps) * 100) / 100, text: words || null, rect: (m.rects && m.rects[0]) || null };
+		$('what').textContent = key + (words ? ' · “' + words.slice(0, 40) + '”' : '');
+		const vp = m.viewport, fr = player.getBoundingClientRect(), r = selected.rect;
+		let x = fr.left + fr.width / 2 - 160, y = fr.top + 20;
+		if (vp && r) {
+			const sx = fr.left + vp.offsetX + (r.x + r.w) * vp.scale + 12, sy = fr.top + vp.offsetY + r.y * vp.scale;
+			x = sx + 320 > innerWidth - 12 ? fr.left + vp.offsetX + r.x * vp.scale - 332 : sx;
+			y = sy;
+		}
+		const c = $('composer');
+		c.style.left = Math.max(12, Math.min(x, innerWidth - 332)) + 'px';
+		c.style.top = Math.max(56, Math.min(y, innerHeight - 170)) + 'px';
+		c.classList.add('show');
+		$('words').value = '';
+		setTimeout(() => $('words').focus(), 30);
+	}
+	function closeComposer() { $('composer').classList.remove('show'); selected = null; try { lakr() && lakr().clearSelection(); } catch (e) {} }
+	async function sendNote() {
+		const words = $('words').value.trim();
+		if (!words || !selected) return;
+		$('send').disabled = true;
+		try {
+			const r = await fetch('/api/notes', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...selected, words }) });
+			if (!r.ok) throw new Error();
+			closeComposer();
+			toast('Note left. Tell your agent to apply your notes.');
+			pull();
+		} catch (e) { toast('Could not save the note. Is your agent still running?'); }
+		$('send').disabled = false;
+	}
+	$('send').onclick = sendNote;
+	$('words').addEventListener('keydown', (e) => {
+		if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendNote(); }
+		if (e.key === 'Escape') closeComposer();
+	});
+
+	// ── the player ──
+	addEventListener('message', (e) => {
+		if (e.origin !== location.origin || !e.data || !e.data.lakr) return;
+		const m = e.data.lakr;
+		switch (m.type) {
+			case 'loaded': ready = true; lastFilm = ''; pull(); break;
+			case 'frame': frame = m.frame; movePlayhead(); break;
+			case 'playing': playing = m.playing; $('playIcon').innerHTML = playing ? '<path d="M3 2h3v10H3zM8 2h3v10H8z" fill="currentColor"/>' : '<path d="M3 1.8v10.4L12 7z" fill="currentColor"/>'; if (playing) closeComposer(); break;
+			case 'select': if (m.keys && m.keys.length) { if (playing) lakr().pause(); openComposer(m); } else closeComposer(); break;
+			case 'moduleError': for (const t of film ? film.tracks : []) for (const c of t.clips) if (c.module === m.module) broken.add(c.id); drawTimeline(); setStatus('A scene did not compile. Your agent will see it.', ''); break;
+			case 'clipError': broken.add(m.clip); drawTimeline(); break;
+			case 'ended': playing = false; break;
+		}
+	});
+	$('play').onclick = () => { if (!ready || !film || !total) return; closeComposer(); if (playing) lakr().pause(); else { if (frame >= Math.round(total * fps) - 1) lakr().seek(0); lakr().play(); } };
+	addEventListener('keydown', (e) => {
+		if (e.target.tagName === 'TEXTAREA') return;
+		if (e.code === 'Space') { e.preventDefault(); $('play').click(); }
+		if (e.key === 'ArrowLeft') seekSec(frame / fps - (e.shiftKey ? 1 : 1 / fps));
+		if (e.key === 'ArrowRight') seekSec(frame / fps + (e.shiftKey ? 1 : 1 / fps));
+	});
+	addEventListener('resize', movePlayhead);
+
+	// ── live: every change the agent makes ──
+	function connect() {
+		const es = new EventSource('/api/events');
+		es.onopen = () => setStatus('Live, following your agent', 'live');
+		es.addEventListener('film', () => pull());
+		es.addEventListener('status', (e) => { const d = JSON.parse(e.data); setStatus(d.words, /…$/.test(d.words) ? 'busy' : 'live'); });
+		es.onerror = () => setStatus('Your agent\'s Lakr session ended. This tab reconnects when it\'s back.', '');
+	}
+	// in case the player said 'loaded' before this page was listening
+	player.addEventListener('load', () => { if (!ready && lakr()) { ready = true; lastFilm = ''; pull(); } });
+	connect();
+	pull();
+})();
+</script>
+</body>
+</html>

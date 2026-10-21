@@ -1,0 +1,3 @@
+The files under src/ are from HyperFrames by HeyGen (https://github.com/heygen-com/hyperframes),
+licensed under the Apache License 2.0 (LICENSE beside this file). Individual items credit their
+authors in their registry-item.json. Lakr reads them as technique references for its own scenes.
