@@ -174,7 +174,8 @@ svg { display: block; }
 .composer { margin: 0 12px 12px; border: 1px solid var(--stroke-hi); background: var(--raised); border-radius: 16px; padding: 12px 12px 10px; flex: none; }
 .composer textarea { width: 100%; min-height: 52px; max-height: 160px; resize: none; background: transparent; border: 0; outline: none; font-size: 15px; padding: 2px 6px; }
 .composer .row { display: flex; align-items: center; gap: 8px; }
-.composer .row .hint { margin: 0; flex: 1; padding-left: 6px; }
+.composer .row .hint { margin: 0; flex: 1; padding-left: 6px; display: flex; align-items: center; gap: 6px; }
+.live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--good); box-shadow: 0 0 0 3px rgba(70,167,88,.18); flex: none; }
 
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(8px); background: var(--raised); border: 1px solid var(--stroke-hi); border-radius: 10px; padding: 9px 14px; opacity: 0; transition: .2s; pointer-events: none; z-index: 50; }
 .toast.show { opacity: 1; transform: translateX(-50%); }
@@ -195,12 +196,56 @@ svg { display: block; }
 	.timeline { height: 280px; }
 	.top .title span { display: none; }
 }
+
+/* ── type: PL.type(weight, size) from ProlineTheme.swift. Inter, tracking only from 15 px up, the app's line heights ── */
+body { font-weight: 400; font-size: 13px; line-height: 1.5; }
+.brand { display: inline-flex; align-items: center; gap: 8px; background: none; border: 0; padding: 4px 6px; margin-left: -6px; border-radius: 8px; }
+.brand:hover { background: var(--well); }
+.brand img { height: 18px; width: auto; display: block; }
+.brand span { font-weight: 600; font-size: 15px; letter-spacing: -0.02em; color: var(--text); }
+.btn { font-weight: 600; font-size: 12px; }
+.btn.wide { font-weight: 600; font-size: 13px; }
+.top .title { font-weight: 600; font-size: 13.5px; line-height: 1.5; }
+.top .title span { font-weight: 400; font-size: 13.5px; }
+.inspector h2 { font-weight: 600; font-size: 15px; line-height: 1.45; letter-spacing: -0.011em; }
+.inspector .lede { font-weight: 400; font-size: 12px; line-height: 1.4; }
+.label { font-weight: 600; font-size: 12px; line-height: 1.4; }
+.field, .select select { font-weight: 400; font-size: 13px; }
+.hint { font-weight: 400; font-size: 11.5px; line-height: 1.4; }
+.slider .name, .slider .val { font-weight: 500; font-size: 13px; }
+.item b { font-weight: 500; font-size: 13px; }
+.item small, .empty-note, .brief-full { font-weight: 400; font-size: 12px; line-height: 1.4; }
+.waiting { font-weight: 400; font-size: 13px; }
+.waiting b { font-weight: 600; font-size: 14px; }
+.tc { font-weight: 600; font-size: 13px; letter-spacing: 0; }
+.ruler { font-weight: 400; font-size: 11.5px; }
+.lane { font-weight: 400; font-size: 12px; }
+.piece .chip { font-weight: 600; font-size: 11px; }
+.piece .chip span { font-weight: 500; }
+.piece .name { font-weight: 600; font-size: 12.5px; }
+.piece .note { font-weight: 400; font-size: 11.5px; }
+.elrow { font-weight: 400; font-size: 12.5px; }
+.film-head h3 { font-weight: 600; font-size: 15px; letter-spacing: -0.011em; }
+.msg { font-weight: 400; font-size: 13.5px; line-height: 1.5; }
+.msg.act { font-weight: 400; font-size: 12px; }
+.msg.me { font-weight: 400; font-size: 13px; }
+.msg.me .el { font-weight: 600; font-size: 11px; }
+.msg.me .state { font-weight: 400; font-size: 11px; }
+.feed .welcome { font-weight: 400; font-size: 13px; line-height: 1.5; }
+.changes h4 { font-weight: 600; font-size: 14px; }
+.changes ul { font-weight: 400; font-size: 12px; line-height: 1.5; }
+.chips button { font-weight: 600; font-size: 12.5px; height: 32px; }
+.composer textarea, .pick textarea { font-weight: 400; font-size: 13.5px; line-height: 1.5; }
+.toast { font-weight: 500; font-size: 12.5px; }
+.menu button { font-weight: 400; font-size: 13px; }
+.menu .cap { font-weight: 400; font-size: 11px; }
+.rail button::after { font-weight: 500; font-size: 12px; }
 </style>
 </head>
 <body>
 <div class="app">
 	<header class="top">
-		<div><button class="btn" id="back"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M7.5 2.5 4 6l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Films</button></div>
+		<div><button class="brand" id="back" title="Films in this project"><img src="/preview/mark.png" alt="" width="14" height="18"><span>Lakr</span></button></div>
 		<div class="title"><b id="filmName">Lakr</b><span id="status">Connecting</span></div>
 		<div class="right">
 			<button class="btn" id="openRender" hidden>Open MP4</button>
@@ -274,7 +319,7 @@ svg { display: block; }
 			<div class="chips" id="chips"></div>
 			<div class="composer">
 				<textarea id="direct" rows="2" placeholder="Direct the whole film…"></textarea>
-				<div class="row"><div class="hint">Click the film to point</div><button class="send" id="directSend" aria-label="Send"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M7 11.5v-9M3 6l4-4 4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
+				<div class="row"><div class="hint" id="directHint">Click the film to point</div><button class="send" id="directSend" aria-label="Send"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M7 11.5v-9M3 6l4-4 4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
 			</div>
 		</aside>
 	</div>
@@ -321,7 +366,8 @@ svg { display: block; }
 		$('filmName').textContent = snap.name || 'Lakr';
 		document.title = (snap.name ? snap.name + ' · ' : '') + 'Lakr';
 		$('changesTitle').textContent = (snap.agent || 'Your agent') + '’s changes';
-		drawTop(); drawFeed(); drawChanges();
+		S.listening = !!snap.listening;
+		drawTop(); drawFeed(); drawChanges(); drawListening();
 		if (!snap.film) { S.film = null; $('waiting').hidden = false; drawTimeline(); drawInspector(); return; }
 		const before = S.film;
 		S.film = snap.film; S.fps = snap.film.fps; S.total = snap.duration || 0;
@@ -373,10 +419,14 @@ svg { display: block; }
 			const n = notes.find((x) => x.words === words);
 			html += `<div class="msg me">${el ? `<span class="el">${esc(el)}</span>` : ''}${esc(words)}${n ? `<span class="state">${n.state === 'taken' ? 'Your agent is on it' : 'Waiting for your agent'}</span>` : ''}</div>`;
 		}
-		if (notes.some((n) => n.state === 'new')) html += `<div class="msg act">Tell your agent “apply my Lakr notes” to pick these up</div>`;
+		if (notes.some((n) => n.state === 'new') && !S.listening) html += `<div class="msg act">${esc(S.snap?.agent || 'Your agent')} is busy. It picks these up when it next listens, or say “apply my Lakr notes” to it.</div>`;
 		feed.innerHTML = html;
 		if (atBottom || !drawFeed.done) feed.scrollTop = feed.scrollHeight;
 		drawFeed.done = true;
+	}
+	function drawListening() {
+		const who = S.snap?.agent || 'Your agent';
+		$('directHint').innerHTML = S.listening ? `<span class="live-dot"></span>${esc(who)} is listening · click the film to point` : 'Click the film to point';
 	}
 	function drawChanges() {
 		const t = S.snap?.turn;
@@ -398,7 +448,7 @@ svg { display: block; }
 		if (!S.snap?.film) return toast('Start a film first: ask your agent.');
 		const r = await post('/api/notes', n);
 		if (r.error) return toast(r.error);
-		toast('Sent. Tell your agent to apply your Lakr notes.');
+		toast(S.listening ? 'Sent to ' + (S.snap?.agent || 'your agent') + '.' : 'Sent. ' + (S.snap?.agent || 'Your agent') + ' picks it up when it next listens.');
 		pull();
 	}
 
@@ -708,6 +758,7 @@ svg { display: block; }
 		es.onopen = () => setStatus('Live');
 		es.addEventListener('film', () => pull());
 		es.addEventListener('status', (e) => setStatus(JSON.parse(e.data).words));
+		es.addEventListener('listening', (e) => { S.listening = JSON.parse(e.data).on; drawListening(); });
 		es.onerror = () => setStatus('Reconnecting to your agent');
 	}
 	drawRail(); drawInspector(); connect(); pull();

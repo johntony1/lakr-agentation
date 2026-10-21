@@ -28,7 +28,9 @@ export function serve({ name, version, instructions, tools }) {
 					client.name = String(params?.clientInfo?.name ?? '');
 					return reply({
 						protocolVersion: VERSIONS.includes(asked) ? asked : VERSIONS[0],
-						capabilities: { tools: { listChanged: false } },
+						// claude/channel: Claude Code (started with --channels / the dev-channels flag) lets this server
+						// push what the maker types in the preview straight into the session
+						capabilities: { tools: { listChanged: false }, experimental: { 'claude/channel': {} } },
 						serverInfo: { name, version },
 						instructions,
 					});
@@ -86,6 +88,9 @@ export function serve({ name, version, instructions, tools }) {
 	process.stdin.on('end', () => process.exit(0));
 	return { log };
 }
+
+/** A notification to the client (no reply expected). */
+export const notify = (method, params) => process.stdout.write(JSON.stringify({ jsonrpc: '2.0', method, params }) + '\n');
 
 export const text = (t) => ({ type: 'text', text: t });
 export const image = (buf, mimeType = 'image/jpeg') => ({ type: 'image', data: Buffer.from(buf).toString('base64'), mimeType });

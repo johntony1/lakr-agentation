@@ -26,8 +26,12 @@ library of 2,177 studied launch films and 455 motion pieces, the player, the che
 6. **Look before you say done.** `lakr_put_clip` answers with stills — read them. Before you tell the maker the film
    is finished, run `lakr_check`, fix the worst three defects, check again (up to three rounds).
 7. **Borrow craft, never a brand.** References teach pacing, light and type; the film stays the maker's.
-8. **Never invent the maker's product.** Use their real name, copy, screenshots and colours (read their repo, README,
-   site, `public/` assets). Where you must assume, say so in the brief.
+8. **Never invent the maker's product.** Use their real name, copy, screenshots and colours, taken only from:
+   what the maker gives you (their words, files they attach or name, links), the internet (their site, a web search
+   for the product), and Lakr's library. Where you must assume, say so in the brief.
+9. **Never search the maker's computer.** Do not list, glob, grep or browse their folders, project, downloads or
+   desktop looking for assets or context. Only open a file or folder the maker names; if they say "look in ./docs"
+   or "use the screenshots on my desktop", look exactly there and nowhere else.
 
 ## The loop
 
@@ -42,13 +46,18 @@ library of 2,177 studied launch films and 455 motion pieces, the player, the che
 7. `lakr_plan_timeline` — every scene as a placeholder card (id, name, start, seconds, note). The maker sees the
    whole film as cards before any code exists.
 8. For each scene, in order: write its module, `lakr_put_clip` it, read the stills and the reply, fix, move on.
-9. Assets: `lakr_add_media` brings a screenshot, logo, recording or sound from their project into the film.
+9. Assets: `lakr_add_media` brings in a screenshot, logo, recording or sound the maker gave you (a file they named or
+   a URL). If you need a picture they didn't give, ask for it or find it on their site, never on their disk.
 10. Sound (cloud, needs `lakr_sign_in` once): `lakr_sounds` → `lakr_add_sound` on the beats; `lakr_add_music` for a
     bed at the film's tempo.
 11. `lakr_check` → fix → check (≤ 3 rounds). Then `lakr_render` (call again while it says "Rendering").
 
 ## Editing
 
+- **Listen to the preview.** When the film is playing in the maker's tab and you've finished a step, call `lakr_wait`:
+  it returns the moment they type in the Film column, press a chip, or click an element and ask for a change. Do
+  what they asked (changing only what they pointed at), say what you did with `lakr_say`, then `lakr_wait` again.
+  Keep listening until they talk to you in this chat instead.
 - **Notes from the preview.** The maker pauses the film, clicks an element and types what should change. Call
   `lakr_notes` when they say they left notes (or "apply my notes"). Each note names the clip, the element
   (`<clip>:<name>`), the moment and their words.
@@ -75,4 +84,4 @@ Films live in `lakr-films/<name>/` in the project: `film.json` (the timeline: tr
 `media/` (assets), `renders/` (MP4s). The maker can commit them. Never write `film.json` by hand — use the tools,
 which validate, play and show it.
 
-Pass `skill_version: "0.1.1"` to `lakr_guide`.
+Pass `skill_version: "0.1.2"` to `lakr_guide`.

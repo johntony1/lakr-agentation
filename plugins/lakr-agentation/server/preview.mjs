@@ -105,6 +105,7 @@ export function snapshot() {
 			return { lines: h.turn?.lines ?? [], open: !!h.turn, canUndo: h.past.length > 0, canRedo: h.future.length > 0 };
 		})(),
 		agent: agentName(),
+		listening,
 		films: store.listFilms(),
 		render: renderStatus?.() ?? null,
 		version: store.filmVersion(),
@@ -247,6 +248,7 @@ function handle(req, res) {
 				f.meta.notes.push(note);
 				store.chat(f, 'maker', note.element ? `${note.element}: ${words}` : words, 'note');
 				store.save(f, 'note', { record: false });
+				store.events.emit('note', note);
 				json(res, note);
 			})
 			.catch(() => json(res, { error: 'bad request' }, 400));
@@ -267,6 +269,11 @@ const broadcast = (event, data) => {
 };
 store.events.on('film', (e) => broadcast('film', e));
 store.events.on('status', (e) => broadcast('status', e));
+let listening = false;
+store.events.on('waiting', (e) => {
+	listening = !!e.on;
+	broadcast('listening', { on: listening });
+});
 setInterval(() => broadcast('ping', {}), 25_000).unref();
 
 /** Start (once) and return the base URL. Tries a stable port first so a reopened tab finds it again. */

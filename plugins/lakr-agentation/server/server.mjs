@@ -7,7 +7,7 @@ import * as check from './check.mjs';
 import * as cloud from './cloud.mjs';
 import * as store from './film.mjs';
 import * as library from './library.mjs';
-import { agentName, image, serve, text, ToolError } from './mcp.mjs';
+import { agentName, image, notify, serve, text, ToolError } from './mcp.mjs';
 import * as media from './media.mjs';
 import { ROOT, VERSION } from './paths.mjs';
 import * as preview from './preview.mjs';
@@ -41,6 +41,8 @@ const onStage = async (fn) => {
 let sounds;
 const soundList = () => (sounds ??= JSON.parse(readFileSync(path.join(ROOT, 'library', 'sounds.json'), 'utf8')));
 
+let waitingNow = 0;
+export const agentListening = () => waitingNow > 0;
 const LOCAL = 'local';
 const CLOUD = 'cloud (Lakr account)';
 
@@ -260,6 +262,36 @@ const tools = [
 		},
 	},
 	{
+		name: 'lakr_wait', where: LOCAL,
+		description: "Wait for the maker to direct the film from the preview tab: what they type in the Film column, a chip they press, or an element they click and ask to change. Returns their words as soon as they send something (up to `seconds`, default 45). When you finish a step and the maker is watching the preview, call this and act on what comes back; if nothing came, call it again, until they say stop or talk to you here.",
+		inputSchema: obj({ seconds: { type: 'number', description: 'how long to wait in this call (max 55)' } }),
+		run: async (a) => {
+			const until = Date.now() + Math.min(55, Math.max(1, Number(a.seconds) || 45)) * 1000;
+			const fresh = () => {
+				try {
+					return store.open().meta.notes.filter((n) => n.state === 'new');
+				} catch {
+					return [];
+				}
+			};
+			waitingNow++;
+			store.events.emit('waiting', { on: true });
+			try {
+				while (!fresh().length && Date.now() < until) {
+					await new Promise((resolve) => {
+						const t = setTimeout(resolve, Math.max(0, until - Date.now()));
+						store.events.once('note', () => (clearTimeout(t), resolve()));
+					});
+				}
+			} finally {
+				waitingNow--;
+				store.events.emit('waiting', { on: waitingNow > 0 });
+			}
+			if (!fresh().length) return 'Nothing from the maker yet. Call lakr_wait again to keep listening (or stop if they are talking to you here).';
+			return tools.find((t) => t.name === 'lakr_notes').run({});
+		},
+	},
+	{
 		name: 'lakr_notes', where: LOCAL,
 		description: "The maker's notes from the preview: each names the clip, the element they clicked (`<clip>:<name>`, with its text), the moment, and what they want changed. Returns the open ones and marks them taken; sending the clip with lakr_put_clip marks them done. Apply each by changing ONLY that element.",
 		inputSchema: obj({ all: { type: 'boolean', description: 'include notes already taken' } }),
@@ -275,7 +307,7 @@ const tools = [
 	},
 	{
 		name: 'lakr_add_media', where: LOCAL,
-		description: "Bring a file from the maker's project (or a URL) into the film — a screenshot, logo, product recording, voice or sound — and place it as a clip. Pictures and recordings go full-frame on their own track unless you say `track`; scene code can show a still by its `src` too.",
+		description: "Bring a file the maker gave you (a path they named, or a URL) into the film. Never go looking on their disk for one — a screenshot, logo, product recording, voice or sound — and place it as a clip. Pictures and recordings go full-frame on their own track unless you say `track`; scene code can show a still by its `src` too.",
 		inputSchema: obj({
 			path: { type: 'string', description: 'a file in the project (relative or absolute)' },
 			url: { type: 'string', description: 'or an https URL to fetch' },
@@ -443,12 +475,26 @@ const tools = [
 	},
 ];
 
+// What the maker types in the preview reaches a Claude Code session started with channels on, at once — unless
+// the agent is already listening with lakr_wait, which hands it over itself.
+store.events.on('note', (n) => {
+	if (waitingNow > 0) return;
+	const where = n.element ? ` (they clicked ${n.element}${n.text ? `, “${n.text}”` : ''}${n.atSec != null ? ` at ${n.atSec} s` : ''})` : '';
+	const meta = { kind: n.element ? 'pointed' : 'direction' };
+	if (n.element) meta.element = String(n.element).replace(/[^A-Za-z0-9_]/g, '_');
+	notify('notifications/claude/channel', {
+		content: `The maker, in the Lakr preview${where}: ${n.words}\n\nCall lakr_notes to take it, do it (change only what they pointed at), tell them what you did with lakr_say, then lakr_wait to keep listening.`,
+		meta,
+	});
+});
+
 serve({
 	name: 'lakr',
 	version: VERSION,
 	instructions:
 		'Lakr Agentation: make and edit films (launch films, demos, motion pieces) with Lakr\'s engine. Read lakr_guide once before writing any scene. '
 		+ 'Order: lakr_new_film → lakr_preview (give the maker the URL) → lakr_library → agree a storyboard in words → lakr_brief → lakr_plan_timeline → '
-		+ 'lakr_put_clip per scene (read its stills) → lakr_check (fix, ≤3 rounds) → lakr_render. Edits: lakr_notes, change only the element pointed at.',
+		+ 'lakr_put_clip per scene (read its stills) → lakr_check (fix, ≤3 rounds) → lakr_render. Edits: lakr_notes / lakr_wait, change only the element pointed at. '
+		+ 'Material comes only from the maker, the internet and lakr_library: never search their computer or project unless they say where to look.',
 	tools,
 });

@@ -1,4 +1,4 @@
-# Lakr Agentation 0.1.1
+# Lakr Agentation 0.1.2
 
 Make launch films, product demos and motion pieces with Lakr from inside your agent: storyboard, write scenes against the Lakr kit, watch them build live in a browser preview, click anything to change it, render the MP4.
 
@@ -10,7 +10,7 @@ element and say what should change; your agent changes exactly that. Then it ren
     /plugin marketplace add johntony1/lakr-agentation
     /plugin install lakr-agentation@lakr
 
-Then ask: "make a 30 second launch film for this project with Lakr" (or `/lakr-agentation:film <idea>`).
+Then ask: "make a 30 second launch film for <your product> with Lakr" (attach or name any assets you want used) (or `/lakr-agentation:film <idea>`).
 
 ## Codex
 

@@ -10,7 +10,7 @@ import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'n
 import http from 'node:http';
 import path from 'node:path';
 import { ToolError } from './mcp.mjs';
-import { DATA } from './paths.mjs';
+import { DATA, ROOT } from './paths.mjs';
 import { openInBrowser } from './preview.mjs';
 
 const SERVICE = process.env.LAKR_SERVICE || 'https://sonoftony2--lakr-motion-api.modal.run';
@@ -100,14 +100,25 @@ export async function api(pathAndQuery, { timeoutMs = 120_000 } = {}) {
 	throw new ToolError('The Lakr sign-in has expired or was revoked. ' + NEED);
 }
 
-/** Public: the laws Lakr drew from 2,000+ studied launch films (no sign-in). */
+/** Public: the laws Lakr drew from 2,000+ studied launch films (no sign-in). Fresh when the service answers, else the
+ *  last copy fetched on this machine, else the copy bundled with the plugin. */
 export async function laws() {
+	const cache = path.join(DATA, 'cache', 'laws.md');
 	try {
-		const r = await fetch(`${SERVICE}/v1/references/styles`, { signal: AbortSignal.timeout(20_000) });
-		return r.ok ? (await r.json()).laws ?? null : null;
-	} catch {
-		return null;
+		const r = await fetch(`${SERVICE}/v1/references/styles`, { signal: AbortSignal.timeout(45_000) });
+		const fresh = r.ok ? (await r.json()).laws ?? null : null;
+		if (fresh) {
+			mkdirSync(path.dirname(cache), { recursive: true });
+			writeFileSync(cache, fresh);
+			return fresh;
+		}
+	} catch {}
+	for (const file of [cache, path.join(ROOT, 'guide', 'LAWS.md')]) {
+		try {
+			return readFileSync(file, 'utf8');
+		} catch {}
 	}
+	return null;
 }
 
 // ── sign-in ────────────────────────────────────────────────────────────────────
