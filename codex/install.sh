@@ -31,7 +31,7 @@ startup_timeout_sec = 20
 tool_timeout_sec = 600
 EOF
 
-echo "Lakr Agentation 0.1.0 installed for Codex:"
+echo "Lakr Agentation 0.1.1 installed for Codex:"
 echo "  server  $dest"
 echo "  skill   $skills/SKILL.md"
 echo "  config  $conf  ([mcp_servers.lakr])"

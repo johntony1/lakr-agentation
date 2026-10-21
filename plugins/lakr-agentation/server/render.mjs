@@ -132,3 +132,9 @@ export async function stop() {
 	await job.promise;
 	return true;
 }
+
+/** For the preview's Export button. */
+export function status() {
+	if (!job) return null;
+	return { running: !job.done, pct: Math.round((100 * job.frame) / job.total), file: job.done && !job.error ? job.file : null, error: job.error ? String(job.error.message ?? job.error) : null, slug: job.slug };
+}

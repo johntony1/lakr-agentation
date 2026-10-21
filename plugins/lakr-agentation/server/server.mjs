@@ -7,7 +7,7 @@ import * as check from './check.mjs';
 import * as cloud from './cloud.mjs';
 import * as store from './film.mjs';
 import * as library from './library.mjs';
-import { image, serve, text, ToolError } from './mcp.mjs';
+import { agentName, image, serve, text, ToolError } from './mcp.mjs';
 import * as media from './media.mjs';
 import { ROOT, VERSION } from './paths.mjs';
 import * as preview from './preview.mjs';
@@ -114,7 +114,7 @@ const tools = [
 				const f = store.open(slug);
 				if (!f.meta.studied) {
 					f.meta.studied = true;
-					store.save(f, 'studied');
+					store.save(f, 'studied', { record: false });
 				}
 			}),
 	},
@@ -132,6 +132,7 @@ const tools = [
 			if (!f.meta.studied) throw new ToolError("Search Lakr's library first (lakr_library): the product's category and mood, every brand or film the maker named, and any effect the film needs. Build the brief on what fits.");
 			f.meta.brief = brief;
 			f.meta.summary = String(a.summary ?? '').trim().slice(0, 600);
+			if (f.meta.summary) store.chat(f, 'agent', f.meta.summary);
 			store.save(f, 'brief');
 			const fits = library.fits(brief);
 			return 'Brief kept with the film (the maker sees the summary in the preview). Next: lakr_plan_timeline from its beats.'
@@ -150,7 +151,9 @@ const tools = [
 			const f = store.open();
 			if (!f.meta.brief) throw new ToolError('Write the brief first (lakr_brief): the maker\'s words refined into timed beats, exact copy, events and sound cues. Then plan from it.');
 			const n = store.plan(f, a.clips, a.bpm, a.look);
-			store.save(f, 'plan');
+			const planned = `Laid out ${n} scene${n === 1 ? '' : 's'}`;
+			store.chat(f, 'agent', planned, 'act');
+			store.save(f, 'plan', { line: planned });
 			store.say(f.slug, `Planned ${n} scene${n === 1 ? '' : 's'} — writing them now.`);
 			return `Planned — the maker sees ${n} placeholder card${n === 1 ? '' : 's'} (${store.duration(f.film).toFixed(1)} s). Now write each scene with lakr_put_clip, in order.`;
 		},
@@ -167,10 +170,13 @@ const tools = [
 		run: (a) =>
 			onStage(async () => {
 				const f = store.open();
+				const was = a.clip?.id ? store.findClip(f.film, a.clip.id)?.clip : null;
 				const { clip } = store.put(f, a.module, a.source, a.clip, a.track);
+				const did = clip ? `${was && !was.pending ? 'Changed' : 'Wrote'} “${clip.name ?? clip.id}”` : `Changed ${a.module}`;
+				store.chat(f, 'agent', did, 'act');
 				// notes on this clip are answered by sending it
 				if (clip) for (const n of f.meta.notes) if (n.clip === clip.id && n.state === 'taken') n.state = 'done';
-				store.save(f, 'put');
+				store.save(f, 'put', { line: did });
 				store.say(f.slug, clip ? `Wrote “${clip.name ?? clip.id}”.` : `Updated module ${a.module}.`);
 				const { page, moduleErrors } = await stage.load(f.film);
 				const problems = [];
@@ -241,6 +247,19 @@ const tools = [
 		},
 	},
 	{
+		name: 'lakr_say', where: LOCAL,
+		description: "Talk to the maker in the preview's Film column (where they watch the film): what you read in their idea, what you just did, what you need from them. Short, plain sentences. The maker answers there or in your chat.",
+		inputSchema: obj({ words: { type: 'string' } }, ['words']),
+		run: (a) => {
+			const f = store.open();
+			const words = String(a.words ?? '').trim();
+			if (!words) throw new ToolError('words: what to tell the maker');
+			store.chat(f, 'agent', words);
+			store.save(f, 'say', { record: false });
+			return preview.tabsOpen() ? 'Shown in the Film column.' : 'Kept in the Film column (no preview tab is open right now: lakr_preview opens it).';
+		},
+	},
+	{
 		name: 'lakr_notes', where: LOCAL,
 		description: "The maker's notes from the preview: each names the clip, the element they clicked (`<clip>:<name>`, with its text), the moment, and what they want changed. Returns the open ones and marks them taken; sending the clip with lakr_put_clip marks them done. Apply each by changing ONLY that element.",
 		inputSchema: obj({ all: { type: 'boolean', description: 'include notes already taken' } }),
@@ -249,7 +268,7 @@ const tools = [
 			const open = f.meta.notes.filter((n) => (a.all ? n.state !== 'done' : n.state === 'new'));
 			if (!open.length) return 'No new notes. (The maker leaves them by pausing the preview, clicking an element and typing what to change.)';
 			for (const n of open) if (n.state === 'new') n.state = 'taken';
-			store.save(f, 'notes');
+			store.save(f, 'notes', { record: false });
 			const lines = open.map((n, i) => `${i + 1}. ${n.element ? `${n.element}${n.text ? ` (“${n.text}”)` : ''}` : n.clip ? `clip ${n.clip}` : 'the film'}${n.atSec != null ? ` at ${n.atSec} s` : ''}: ${n.words}`);
 			return `${open.length} note${open.length === 1 ? '' : 's'} from the maker:\n${lines.join('\n')}\n\nFor each: open the clip's module (lakr_get_timeline with module), change only what the note points at, keep everything else byte-identical, and send it back with lakr_put_clip. Say what you changed in one line each.`;
 		},
@@ -303,7 +322,8 @@ const tools = [
 				t.clips.push(clip);
 				t.clips.sort((x, y) => x.startSec - y.startSec);
 			}
-			store.save(f, 'media');
+			store.chat(f, 'agent', `Added ${kind} “${clip.name}”`, 'act');
+			store.save(f, 'media', { line: `Added “${clip.name}”` });
 			return `Placed ${kind} “${clip.name}” as clip ${clip.id} at ${clip.startSec}–${(clip.startSec + clip.durationSec).toFixed(2)} s (src "${name}" in media/).`;
 		},
 	},
@@ -318,7 +338,8 @@ const tools = [
 			const [c] = f.film.tracks[at.track].clips.splice(at.index, 1);
 			if (c.module && !f.film.tracks.some((t) => t.clips.some((x) => x.module === c.module))) delete f.film.modules[c.module];
 			f.film.tracks = f.film.tracks.filter((t) => t.clips.length || t.id === 'scenes');
-			store.save(f, 'remove');
+			store.chat(f, 'agent', `Removed “${c.name ?? c.id}”`, 'act');
+			store.save(f, 'remove', { line: `Removed “${c.name ?? c.id}”` });
 			return `Removed ${c.id}.`;
 		},
 	},
@@ -373,7 +394,8 @@ const tools = [
 			if (!t) f.film.tracks.push((t = { id: 'sound', name: 'Sound', kind: 'audio', clips: [] }));
 			t.clips.push(clip);
 			t.clips.sort((x, y) => x.startSec - y.startSec);
-			store.save(f, 'sound');
+			store.chat(f, 'agent', `Placed ${s.title} at ${at.toFixed(1)} s`, 'act');
+			store.save(f, 'sound', { line: `Placed a sound at ${at.toFixed(1)} s` });
 			return `Placed ${s.id} as ${id}: peak at ${at.toFixed(2)} s (starts ${start.toFixed(2)} s).`;
 		},
 	},
@@ -402,7 +424,8 @@ const tools = [
 			f.film.tracks = f.film.tracks.filter((t) => t.id !== 'music');
 			f.film.tracks.push({ id: 'music', name: 'Music', kind: 'audio', clips: [{ id: 'music', name: `Music bed · ${bpm} bpm ${mood}`, kind: 'audio', startSec: 0, durationSec: total, src: `music/${name}`, volume: Math.round(10 ** ((num(a.volume_db) ?? -14) / 20) * 1000) / 1000 }] });
 			f.film.beats = { ...(f.film.beats ?? {}), bpm, beatsPerBar: f.film.beats?.beatsPerBar ?? 4 };
-			store.save(f, 'music');
+			store.chat(f, 'agent', `Music bed: ${bpm} bpm, ${mood}`, 'act');
+			store.save(f, 'music', { line: `Music bed at ${bpm} bpm` });
 			return `Music bed placed: ${bpm} bpm, ${mood}, ${warmth}, ${total.toFixed(1)} s. Land cuts on its beat (${(60 / bpm).toFixed(3)} s).`;
 		},
 	},

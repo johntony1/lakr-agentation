@@ -6,6 +6,10 @@ const VERSIONS = ['2025-06-18', '2025-03-26', '2024-11-05'];
 
 export class ToolError extends Error {}
 
+/** Who is driving: Claude Code says "claude-code", Codex "codex-mcp-client". */
+export const client = { name: '' };
+export const agentName = () => (/codex/i.test(client.name) ? 'Codex' : /claude/i.test(client.name) ? 'Claude' : 'Your agent');
+
 /** tools: [{name, description, inputSchema, run(args, ctx) → content[] | string}] */
 export function serve({ name, version, instructions, tools }) {
 	const byName = new Map(tools.map((t) => [t.name, t]));
@@ -21,6 +25,7 @@ export function serve({ name, version, instructions, tools }) {
 			switch (method) {
 				case 'initialize': {
 					const asked = params?.protocolVersion;
+					client.name = String(params?.clientInfo?.name ?? '');
 					return reply({
 						protocolVersion: VERSIONS.includes(asked) ? asked : VERSIONS[0],
 						capabilities: { tools: { listChanged: false } },

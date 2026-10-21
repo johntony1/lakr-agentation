@@ -97,13 +97,97 @@ export function open(slug = currentSlug()) {
 }
 
 let version = 0;
-export function save(f, why = 'changed') {
+const MAX_HISTORY = 40;
+
+// Undo / redo and "your agent's changes": per film, in <film>/.history.json, so they survive a restart.
+//   past/future: whole films (the IR) before/after each change; turn: what the agent changed since the maker
+//   last pressed Keep (the film before it, and the lines saying what it did).
+const historyFile = (f) => path.join(f.dir, '.history.json');
+export const history = (f) => readJSON(historyFile(f), null) ?? { past: [], future: [], turn: null };
+const writeHistory = (f, h) => {
+	h.past = h.past.slice(-MAX_HISTORY);
+	h.future = h.future.slice(-MAX_HISTORY);
+	writeJSON(historyFile(f), h);
+};
+
+/** Write the film. `by` = who changed it ('agent' | 'maker'); `line` = what the agent did, for its changes card. */
+export function save(f, why = 'changed', { by = 'agent', line = null, record = true } = {}) {
 	mkdirSync(f.dir, { recursive: true });
-	writeJSON(path.join(f.dir, 'film.json'), f.film);
+	const file = path.join(f.dir, 'film.json');
+	const before = readJSON(file, null);
+	const changed = !before || JSON.stringify(before) !== JSON.stringify(f.film);
+	if (record && changed && before) {
+		const h = history(f);
+		h.past.push({ film: before, why, by, at: Date.now() });
+		h.future = [];
+		if (by === 'agent') {
+			h.turn ??= { base: before, lines: [], at: Date.now() };
+			if (line) h.turn.lines.push(line);
+		}
+		writeHistory(f, h);
+	} else if (record && by === 'agent' && line) {
+		const h = history(f);
+		if (h.turn) {
+			h.turn.lines.push(line);
+			writeHistory(f, h);
+		}
+	}
+	writeJSON(file, f.film);
 	f.meta.updatedAt = new Date().toISOString();
 	writeJSON(path.join(f.dir, 'lakr.json'), f.meta);
 	version++;
 	events.emit('film', { slug: f.slug, version, why });
+}
+
+function restore(f, film, why) {
+	f.film = film;
+	writeJSON(path.join(f.dir, 'film.json'), f.film);
+	writeJSON(path.join(f.dir, 'lakr.json'), f.meta);
+	version++;
+	events.emit('film', { slug: f.slug, version, why });
+}
+
+export function undo(f) {
+	const h = history(f);
+	const last = h.past.pop();
+	if (!last) return false;
+	h.future.push({ film: f.film, why: last.why, by: last.by, at: Date.now() });
+	writeHistory(f, h);
+	restore(f, last.film, 'undo');
+	return true;
+}
+
+export function redo(f) {
+	const h = history(f);
+	const next = h.future.pop();
+	if (!next) return false;
+	h.past.push({ film: f.film, why: next.why, by: next.by, at: Date.now() });
+	writeHistory(f, h);
+	restore(f, next.film, 'redo');
+	return true;
+}
+
+/** The maker keeps (or takes back) everything the agent changed since the last Keep. */
+export function settleTurn(f, keep) {
+	const h = history(f);
+	const turn = h.turn;
+	h.turn = null;
+	if (!turn) return null;
+	if (!keep) {
+		h.past.push({ film: f.film, why: 'undo-turn', by: 'maker', at: Date.now() });
+		h.future = [];
+	}
+	writeHistory(f, h);
+	if (!keep) restore(f, turn.base, 'undo-turn');
+	else events.emit('film', { slug: f.slug, version: ++version, why: 'keep' });
+	return turn;
+}
+
+/** A line in the Film column: the agent talking (lakr_say), the agent's actions, or the maker's directions. */
+export function chat(f, from, text, kind = 'say') {
+	f.meta.chat ??= [];
+	f.meta.chat.push({ from, kind, text: String(text).slice(0, 4000), at: Date.now() });
+	f.meta.chat = f.meta.chat.slice(-120);
 }
 
 export const say = (slug, words) => events.emit('status', { slug, words, at: Date.now() });

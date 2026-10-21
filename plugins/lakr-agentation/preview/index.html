@@ -3,328 +3,714 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Lakr Preview</title>
+<title>Lakr</title>
+<link rel="stylesheet" href="/preview/fonts.css">
 <style>
+/* Lakr's editor (VideoEditorView, film session): PL / Ed tokens from ProlineTheme.swift + EditorChrome.swift */
 :root {
-	--bg: #0e0e10; --panel: #151518; --raise: #1c1c20; --line: rgba(255,255,255,0.08); --line-2: rgba(255,255,255,0.14);
-	--ink: #f3f3f1; --sub: #a1a1a6; --faint: #6c6c72; --accent: #ff6a3d; --accent-soft: rgba(255,106,61,0.14);
-	--good: #3ecf8e; --bad: #ff5a5f; --radius: 10px;
-	--font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-	--mono: ui-monospace, "SF Mono", Menlo, monospace;
+	--panel: #101012; --stage: #0A0A0C; --well: #17181B; --raised: #17181B; --stroke: #1F2024; --stroke-hi: #26272B;
+	--text: #E7E8EA; --sub: #9C9FA5; --soft: #686A70; --orange: #E16614; --orange-deep: #B84E0C; --bad: #F16A6F; --good: #46A758;
+	--slider-track: #17181B; --slider-fill: #26272B;
+	--rail: 52px; --inspector: 320px; --film: 380px; --top: 46px;
+	--font: "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+	color-scheme: dark;
 }
 * { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font: 13px/1.45 var(--font); -webkit-font-smoothing: antialiased; }
-button { font: inherit; color: inherit; }
-.app { display: grid; grid-template-rows: 48px 1fr auto; height: 100vh; }
-
-header { display: flex; align-items: center; gap: 12px; padding: 0 16px; border-bottom: 1px solid var(--line); }
-.mark { display: flex; align-items: center; gap: 8px; font-weight: 600; letter-spacing: -0.01em; }
-.mark i { width: 14px; height: 14px; border-radius: 4px; background: var(--accent); display: block; }
-.film-name { color: var(--sub); padding-left: 12px; border-left: 1px solid var(--line-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.status { margin-left: auto; display: flex; align-items: center; gap: 8px; color: var(--sub); min-width: 0; }
-.status span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 46vw; }
-.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); flex: none; }
-.dot.live { background: var(--good); box-shadow: 0 0 0 3px rgba(62,207,142,0.15); }
-.dot.busy { background: var(--accent); animation: pulse 1.2s ease-in-out infinite; }
-@keyframes pulse { 50% { opacity: 0.35; } }
-
-main { display: grid; grid-template-columns: 1fr 300px; min-height: 0; }
-.stage { display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: 16px; gap: 12px; }
-.frame-wrap { flex: 1; min-height: 0; display: grid; place-items: center; position: relative; }
-.frame { position: relative; background: #000; border-radius: 8px; overflow: hidden; box-shadow: 0 0 0 1px var(--line), 0 20px 60px rgba(0,0,0,0.45); }
-.frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; }
-.empty { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; color: var(--sub); padding: 24px; }
+html, body { margin: 0; height: 100%; background: var(--panel); color: var(--text); font: 500 13px/1.4 var(--font); -webkit-font-smoothing: antialiased; overflow: hidden; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+svg { display: block; }
 [hidden] { display: none !important; }
-.empty b { display: block; color: var(--ink); font-size: 15px; margin-bottom: 4px; font-weight: 600; }
 
-.transport { display: flex; align-items: center; gap: 12px; }
-.play { width: 34px; height: 34px; border-radius: 50%; border: 0; background: var(--ink); color: #111; display: grid; place-items: center; cursor: pointer; flex: none; }
-.play svg { width: 14px; height: 14px; }
-.time { font: 12px var(--mono); color: var(--sub); min-width: 112px; }
-.hint { color: var(--faint); margin-left: auto; font-size: 12px; text-align: right; }
+/* buttons: PLFancyButtonStyle, machined black and the house orange */
+.btn { height: 30px; padding: 0 12px; border-radius: 8px; border: 0; display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 13px; color: #fff; white-space: nowrap;
+	background: linear-gradient(#2C2D31, #131418); box-shadow: inset 0 1px 0 rgba(255,255,255,.14), inset 0 0 0 1px rgba(255,255,255,.04), 0 0 0 1px #0B0B0D, 0 1px 1px rgba(0,0,0,.4); }
+.btn:hover { filter: brightness(1.12); }
+.btn.orange { background: linear-gradient(var(--orange), var(--orange-deep)); box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 0 0 1px #8F3E0A, 0 2px 6px rgba(225,102,20,.2); }
+.btn:disabled { background: var(--well); box-shadow: none; opacity: .55; cursor: default; filter: none; }
+.btn.wide { height: 40px; flex: 1; justify-content: center; font-size: 14px; border-radius: 10px; }
+.icon-btn { width: 32px; height: 32px; border: 0; background: transparent; border-radius: 8px; display: grid; place-items: center; color: var(--sub); }
+.icon-btn:hover:not(:disabled) { background: var(--well); color: var(--text); }
+.icon-btn:disabled { opacity: .35; cursor: default; }
+.icon-btn.on { color: var(--orange); background: rgba(225,102,20,.12); }
 
-aside { border-left: 1px solid var(--line); padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
-aside h3 { margin: 0 0 8px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--faint); }
-.brief { color: var(--sub); white-space: pre-wrap; }
-.notes { display: flex; flex-direction: column; gap: 8px; }
-.note { background: var(--raise); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; position: relative; }
-.note .el { font: 11px var(--mono); color: var(--accent); margin-bottom: 3px; padding-right: 22px; overflow-wrap: anywhere; }
-.note .state { font-size: 11px; color: var(--faint); margin-top: 4px; }
-.note .x { position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; border: 0; border-radius: 6px; background: transparent; color: var(--faint); cursor: pointer; }
-.note .x:hover { background: var(--line); color: var(--ink); }
-.callout { background: var(--accent-soft); border: 1px solid rgba(255,106,61,0.35); border-radius: var(--radius); padding: 10px 12px; }
-.callout code { display: block; margin-top: 6px; font: 12px var(--mono); color: var(--ink); }
-.copy { margin-top: 8px; border: 1px solid var(--line-2); background: transparent; border-radius: 7px; padding: 4px 10px; cursor: pointer; color: var(--ink); }
-.muted { color: var(--faint); }
-.renders a { color: var(--ink); display: block; padding: 4px 0; text-decoration: none; overflow-wrap: anywhere; }
-.renders a:hover { color: var(--accent); }
+/* frame */
+.app { display: grid; grid-template-rows: var(--top) 1fr; height: 100vh; }
+.top { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0 14px; border-bottom: 1px solid var(--stroke); }
+.top .title { font-weight: 600; font-size: 14px; display: flex; gap: 8px; align-items: baseline; min-width: 0; }
+.top .title span { color: var(--soft); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 28vw; }
+.top .right { display: flex; justify-content: flex-end; gap: 8px; }
+.body { display: grid; grid-template-columns: 1fr var(--film); min-height: 0; }
+.body.film-closed { grid-template-columns: 1fr 0; }
+.main { display: grid; grid-template-rows: 1fr auto; min-width: 0; min-height: 0; }
+.upper { display: grid; grid-template-columns: var(--rail) var(--inspector) 1fr; min-height: 0; border-bottom: 1px solid var(--stroke); }
 
-.timeline { border-top: 1px solid var(--line); background: var(--panel); padding: 10px 16px 14px; position: relative; user-select: none; }
-.ruler { position: relative; height: 18px; margin-left: 88px; font: 10px var(--mono); color: var(--faint); cursor: pointer; }
-.ruler span { position: absolute; top: 2px; transform: translateX(-50%); }
-.tracks { display: flex; flex-direction: column; gap: 6px; }
-.track { display: flex; align-items: stretch; gap: 8px; min-height: 46px; }
-.track .label { width: 80px; flex: none; color: var(--faint); font-size: 11px; display: flex; align-items: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.lane { position: relative; flex: 1; background: rgba(255,255,255,0.025); border-radius: 7px; cursor: pointer; }
-.track.audio { min-height: 26px; }
-.clip { position: absolute; top: 3px; bottom: 3px; border-radius: 6px; background: var(--raise); border: 1px solid var(--line-2); padding: 5px 8px; line-height: 1.3; overflow: hidden; cursor: pointer; transition: border-color .15s, background .15s; }
-.clip:hover { border-color: rgba(255,255,255,0.3); }
-.clip b { display: block; font-size: 11.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.clip small { display: block; font-size: 10.5px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.clip.pending { background: transparent; border-style: dashed; color: var(--sub); }
-.clip.broken { border-color: var(--bad); background: rgba(255,90,95,0.1); }
-.clip.fresh { animation: land .7s cubic-bezier(.16,1,.3,1); }
-@keyframes land { from { background: var(--accent-soft); border-color: var(--accent); } }
-.clip.audio { background: rgba(62,207,142,0.12); border-color: rgba(62,207,142,0.3); top: 2px; bottom: 2px; padding: 2px 6px; }
-.clip.media { background: rgba(122,140,255,0.14); border-color: rgba(122,140,255,0.35); }
-.playhead { position: absolute; top: 10px; bottom: 10px; width: 2px; background: var(--accent); border-radius: 1px; pointer-events: none; z-index: 3; }
-.playhead::before { content: ""; position: absolute; top: -2px; left: -4px; width: 10px; height: 10px; border-radius: 3px; background: var(--accent); }
+/* rail: icons only, name on hover */
+.rail { border-right: 1px solid var(--stroke); display: flex; flex-direction: column; align-items: center; padding: 12px 0; gap: 8px; }
+.rail button { width: 36px; height: 36px; border-radius: 9px; border: 0; background: transparent; color: var(--sub); display: grid; place-items: center; position: relative; }
+.rail button:hover { color: var(--text); background: var(--well); }
+.rail button.on { color: #fff; background: linear-gradient(var(--orange), var(--orange-deep)); box-shadow: inset 0 1px 0 rgba(255,255,255,.2); }
+.rail button::after { content: attr(data-name); position: absolute; left: 44px; top: 50%; transform: translateY(-50%); background: var(--raised); border: 1px solid var(--stroke-hi); color: var(--text);
+	padding: 4px 8px; border-radius: 6px; font-size: 12px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .12s; z-index: 30; }
+.rail button:hover::after { opacity: 1; }
 
-.composer { position: fixed; z-index: 10; width: 320px; background: var(--raise); border: 1px solid var(--line-2); border-radius: 12px; padding: 10px; box-shadow: 0 16px 48px rgba(0,0,0,0.5); display: none; }
-.composer.show { display: block; animation: pop .22s cubic-bezier(.16,1,.3,1); }
-@keyframes pop { from { opacity: 0; transform: translateY(4px) scale(.98); } }
-.composer .what { font: 11px var(--mono); color: var(--accent); margin: 0 2px 6px; overflow-wrap: anywhere; }
-.composer textarea { width: 100%; min-height: 64px; resize: vertical; background: var(--bg); color: var(--ink); border: 1px solid var(--line-2); border-radius: 8px; padding: 8px 10px; font: inherit; outline: none; }
-.composer textarea:focus { border-color: var(--accent); }
-.composer .row { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; gap: 8px; }
-.send { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 6px 12px; font-weight: 600; cursor: pointer; }
-.send:disabled { opacity: .5; cursor: default; }
-.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--raise); border: 1px solid var(--line-2); padding: 8px 14px; border-radius: 9px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 20; }
-.toast.show { opacity: 1; }
+/* inspector */
+.inspector { border-right: 1px solid var(--stroke); overflow-y: auto; padding: 18px 20px 24px; display: flex; flex-direction: column; gap: 18px; }
+.inspector > * { flex: none; }
+.inspector h2 { margin: 0; font-size: 16px; font-weight: 600; }
+.inspector .lede { color: var(--sub); margin-top: -10px; line-height: 1.5; }
+.label { font-weight: 600; font-size: 12px; color: var(--sub); margin-bottom: 8px; }
+.field { background: var(--well); border-radius: 10px; padding: 10px 12px; min-height: 40px; display: flex; align-items: center; }
+.hint { color: var(--soft); font-size: 12px; margin-top: 6px; line-height: 1.45; }
+.select { position: relative; }
+.select select { appearance: none; width: 100%; height: 40px; background: var(--well); border: 0; border-radius: 10px; padding: 0 34px 0 12px; outline: none; cursor: pointer; }
+.select::after { content: ""; position: absolute; right: 14px; top: 50%; width: 6px; height: 6px; border-right: 1.5px solid var(--sub); border-bottom: 1.5px solid var(--sub); transform: translateY(-70%) rotate(45deg); pointer-events: none; }
+.done { align-self: flex-start; }
+/* AlignSlider, the editor's cut */
+.slider { position: relative; height: 40px; border-radius: 10px; background: var(--slider-track); cursor: ew-resize; user-select: none; touch-action: none; overflow: hidden; }
+.slider .fill { position: absolute; inset: 0 auto 0 0; background: var(--slider-fill); border-radius: 10px 0 0 10px; }
+.slider .knob { position: absolute; top: 7px; width: 6px; height: 26px; border-radius: 3px; background: #fff; transform: translateX(-3px); box-shadow: 0 1px 3px rgba(0,0,0,.4); }
+.slider .dots { position: absolute; inset: 0 76px 0 96px; display: flex; justify-content: space-between; align-items: center; pointer-events: none; }
+.slider .dots i { width: 3px; height: 3px; border-radius: 50%; background: var(--soft); }
+.slider .name, .slider .val { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; pointer-events: none; font-size: 13px; }
+.slider .name { left: 14px; color: var(--sub); } .slider .val { right: 14px; }
+.swatches { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.swatch { width: 28px; height: 28px; border-radius: 8px; border: 1px solid rgba(255,255,255,.12); cursor: pointer; padding: 0; }
+.swatch.on { outline: 2px solid var(--orange); outline-offset: 2px; }
+.swatches input[type=color] { width: 28px; height: 28px; border: 0; padding: 0; background: none; cursor: pointer; }
+.row-btns { display: flex; gap: 8px; }
+.list { display: flex; flex-direction: column; gap: 6px; }
+.item { background: var(--well); border: 1px solid transparent; border-radius: 10px; padding: 10px 12px; cursor: pointer; }
+.item:hover { border-color: var(--stroke-hi); }
+.item.on { border-color: var(--orange); }
+.item b { font-weight: 600; display: flex; justify-content: space-between; gap: 8px; }
+.item b span { color: var(--soft); font-weight: 500; font-variant-numeric: tabular-nums; }
+.item small { display: block; color: var(--sub); margin-top: 3px; font-size: 12px; line-height: 1.45; }
+.empty-note { color: var(--soft); line-height: 1.5; }
+.brief-full { white-space: pre-wrap; color: var(--sub); line-height: 1.55; font-size: 12.5px; }
 
+/* player */
+.player { display: grid; grid-template-rows: 1fr 52px; min-width: 0; min-height: 0; }
+.stage { background: var(--stage); position: relative; min-height: 0; display: grid; place-items: center; padding: 18px; }
+.frame { position: relative; overflow: hidden; border-radius: 4px; }
+.frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; background: transparent; }
+.waiting { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; color: var(--soft); padding: 24px; line-height: 1.6; }
+.waiting b { display: block; color: var(--text); font-weight: 600; font-size: 15px; margin-bottom: 2px; }
+.transport { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0 16px; border-top: 1px solid var(--stroke); }
+.tc { font-weight: 600; font-size: 15px; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+.tc span { color: var(--soft); }
+.controls { display: flex; gap: 14px; align-items: center; }
+.controls button { border: 0; background: none; color: var(--text); width: 32px; height: 32px; display: grid; place-items: center; border-radius: 8px; }
+.controls button:hover { background: var(--well); }
+
+/* "what should change here?" on a picked element */
+.pick { position: absolute; z-index: 20; width: 380px; max-width: calc(100% - 24px); background: rgba(23,24,27,.97); border: 1px solid var(--stroke-hi); border-radius: 16px; padding: 12px 12px 10px; box-shadow: 0 18px 48px rgba(0,0,0,.55); }
+.pick textarea { width: 100%; min-height: 46px; max-height: 160px; resize: none; background: transparent; border: 0; outline: none; font-size: 15px; padding: 4px 6px; color: var(--text); }
+.pick textarea::placeholder, .composer textarea::placeholder { color: var(--soft); }
+.pick .row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.pick .row .hint { margin: 0; flex: 1; padding-left: 6px; }
+.send { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--stroke-hi); background: var(--raised); color: var(--sub); display: grid; place-items: center; flex: none; }
+.send.ready { background: var(--orange); color: #fff; border-color: transparent; }
+
+/* timeline */
+.timeline { display: flex; flex-direction: column; height: 330px; min-height: 0; background: var(--panel); }
+.tl-tools { height: 46px; display: flex; align-items: center; gap: 4px; padding: 0 12px; border-bottom: 1px solid var(--stroke); flex: none; }
+.tl-tools .sep { width: 1px; height: 20px; background: var(--stroke-hi); margin: 0 6px; }
+.tl-tools .spacer { flex: 1; }
+.zoomer { width: 140px; height: 18px; position: relative; cursor: ew-resize; touch-action: none; }
+.zoomer .dots { position: absolute; inset: 0 4px; display: flex; justify-content: space-between; align-items: center; }
+.zoomer .dots i { width: 3px; height: 3px; border-radius: 50%; background: var(--soft); }
+.zoomer .knob { position: absolute; top: 1px; width: 8px; height: 16px; border-radius: 4px; background: #fff; transform: translateX(-4px); }
+.tl-body { flex: 1; display: grid; grid-template-columns: 52px 1fr; min-height: 0; }
+.gutter { display: flex; flex-direction: column; align-items: center; color: var(--sub); }
+.tl-scroll { overflow-x: auto; overflow-y: auto; position: relative; }
+.tl-inner { position: relative; padding: 0 20px 16px 16px; min-width: 100%; }
+.ruler { height: 34px; position: relative; color: var(--sub); font-size: 12px; font-variant-numeric: tabular-nums; cursor: pointer; }
+.ruler span { position: absolute; top: 10px; transform: translateX(-2px); }
+.ruler i { position: absolute; top: 28px; width: 1px; height: 6px; background: var(--stroke-hi); }
+.lane { position: relative; height: 46px; margin-top: 6px; border-radius: 10px; border: 1px dashed var(--stroke-hi); color: var(--soft); display: grid; place-items: center; cursor: pointer; }
+.lane:hover { color: var(--sub); border-color: #34353a; }
+.track { position: relative; height: 92px; margin-top: 8px; }
+.track.audio { height: 40px; margin-top: 6px; }
+.piece { position: absolute; top: 0; bottom: 0; border-radius: 10px; background: #2A1A12; border: 1px solid #3D2518; overflow: hidden; cursor: pointer; }
+.piece:hover { border-color: #5A341F; }
+.piece.on { border-color: var(--orange); box-shadow: 0 0 0 1px var(--orange); }
+.piece.pending { background: transparent; border: 1px dashed #4A3326; }
+.piece.broken { border-color: var(--bad); }
+.piece.fresh { animation: land .8s cubic-bezier(.16,1,.3,1); }
+@keyframes land { from { background: #5A2D12; } }
+.piece .chip { position: absolute; top: 8px; left: 8px; max-width: calc(100% - 16px); display: inline-flex; gap: 6px; align-items: center; background: rgba(10,10,12,.72); border-radius: 7px; padding: 3px 7px; font-size: 11.5px; font-weight: 600; white-space: nowrap; overflow: hidden; }
+.piece .chip span { color: var(--sub); font-weight: 500; font-variant-numeric: tabular-nums; }
+.piece .name { position: absolute; left: 10px; right: 10px; top: 40px; display: flex; gap: 6px; align-items: center; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.piece .note { position: absolute; left: 10px; right: 10px; bottom: 9px; color: var(--sub); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.piece.media { background: #1A1C2A; border-color: #2A2E48; }
+.piece.sound { background: rgba(225,102,20,.14); border-color: rgba(225,102,20,.32); }
+.piece.sound .name { top: 11px; font-size: 12px; color: #F2B48A; }
+.elrows { position: relative; margin-top: 8px; }
+.elrow { position: absolute; height: 32px; border-radius: 8px; background: var(--well); border: 1px solid var(--stroke); padding: 0 10px; display: flex; align-items: center; font-size: 13px; cursor: pointer; white-space: nowrap; overflow: hidden; }
+.elrow:hover { border-color: var(--stroke-hi); }
+.elrow.on { border-color: var(--orange); color: #F08A45; background: rgba(225,102,20,.08); }
+.playhead { position: absolute; top: 18px; bottom: 0; width: 2px; margin-left: -1px; background: var(--bad); pointer-events: none; z-index: 5; }
+.playhead::before { content: ""; position: absolute; top: -6px; left: -5px; width: 12px; height: 12px; border-radius: 50%; background: var(--bad); }
+
+/* film column: Ask Lakr's shape */
+.film { border-left: 1px solid var(--stroke); display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
+.film-head { height: 52px; display: flex; align-items: center; padding: 0 12px 0 18px; flex: none; }
+.film-head h3 { margin: 0; font-size: 16px; font-weight: 600; flex: 1; }
+.feed { flex: 1; overflow-y: auto; padding: 4px 20px 16px; display: flex; flex-direction: column; gap: 14px; }
+.msg { font-size: 14.5px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+.msg.act { font-size: 12.5px; color: var(--sub); display: flex; gap: 8px; align-items: center; }
+.msg.act::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--orange); flex: none; }
+.msg.me { align-self: flex-end; max-width: 85%; background: var(--well); border-radius: 14px 14px 4px 14px; padding: 9px 12px; font-size: 13.5px; }
+.msg.me .el { display: block; font-size: 11.5px; color: #F08A45; margin-bottom: 2px; font-weight: 600; }
+.msg.me .state { display: block; font-size: 11px; color: var(--soft); margin-top: 3px; }
+.feed .welcome { color: var(--sub); line-height: 1.6; }
+.changes { margin: 0 16px 12px; border: 1px solid rgba(225,102,20,.45); border-radius: 14px; background: rgba(225,102,20,.05); padding: 14px 16px; flex: none; }
+.changes h4 { margin: 0 0 6px; font-size: 15px; font-weight: 600; display: flex; gap: 8px; align-items: center; }
+.changes ul { margin: 0 0 12px; padding: 0; list-style: none; color: var(--sub); line-height: 1.55; max-height: 96px; overflow-y: auto; }
+.chips { display: flex; gap: 8px; padding: 0 16px 10px; overflow-x: auto; flex: none; scrollbar-width: none; }
+.chips button { flex: none; height: 34px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--stroke-hi); background: var(--raised); font-weight: 600; white-space: nowrap; }
+.chips button:hover { border-color: #3a3b40; }
+.composer { margin: 0 12px 12px; border: 1px solid var(--stroke-hi); background: var(--raised); border-radius: 16px; padding: 12px 12px 10px; flex: none; }
+.composer textarea { width: 100%; min-height: 52px; max-height: 160px; resize: none; background: transparent; border: 0; outline: none; font-size: 15px; padding: 2px 6px; }
+.composer .row { display: flex; align-items: center; gap: 8px; }
+.composer .row .hint { margin: 0; flex: 1; padding-left: 6px; }
+
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(8px); background: var(--raised); border: 1px solid var(--stroke-hi); border-radius: 10px; padding: 9px 14px; opacity: 0; transition: .2s; pointer-events: none; z-index: 50; }
+.toast.show { opacity: 1; transform: translateX(-50%); }
+.menu { position: absolute; top: 40px; left: 14px; z-index: 40; background: var(--raised); border: 1px solid var(--stroke-hi); border-radius: 12px; padding: 6px; min-width: 220px; box-shadow: 0 16px 40px rgba(0,0,0,.5); }
+.menu button { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 8px 10px; border-radius: 8px; }
+.menu button:hover { background: var(--well); }
+.menu .cap { color: var(--soft); font-size: 11.5px; padding: 6px 10px 4px; }
+
+@media (max-width: 1100px) { :root { --inspector: 270px; --film: 320px; } }
 @media (max-width: 860px) {
-	main { grid-template-columns: 1fr; }
-	aside { border-left: 0; border-top: 1px solid var(--line); max-height: 34vh; }
-	.hint { display: none; }
-	.track .label { width: 54px; } .ruler { margin-left: 62px; }
+	html, body { overflow: auto; }
+	.app { height: auto; min-height: 100vh; }
+	.body, .body.film-closed { grid-template-columns: 1fr; }
+	.upper { grid-template-columns: var(--rail) 1fr; grid-template-rows: auto auto; }
+	.inspector { grid-column: 1 / -1; grid-row: 2; border-right: 0; border-top: 1px solid var(--stroke); max-height: 40vh; }
+	.player { grid-row: 1; min-height: 300px; }
+	.film { border-left: 0; border-top: 1px solid var(--stroke); max-height: 70vh; }
+	.timeline { height: 280px; }
+	.top .title span { display: none; }
 }
 </style>
 </head>
 <body>
 <div class="app">
-	<header>
-		<div class="mark"><i></i>Lakr</div>
-		<div class="film-name" id="filmName"></div>
-		<div class="status"><span class="dot" id="dot"></span><span id="status">Connecting…</span></div>
+	<header class="top">
+		<div><button class="btn" id="back"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M7.5 2.5 4 6l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Films</button></div>
+		<div class="title"><b id="filmName">Lakr</b><span id="status">Connecting</span></div>
+		<div class="right">
+			<button class="btn" id="openRender" hidden>Open MP4</button>
+			<button class="btn orange" id="export">Export</button>
+		</div>
 	</header>
-	<main>
-		<section class="stage">
-			<div class="frame-wrap" id="wrap">
-				<div class="frame" id="frame"><iframe id="player" src="/player/index.html" title="Film"></iframe>
-					<div class="empty" id="empty"><div><b>Waiting for your agent</b>Ask it to make a film with Lakr. It appears here as it's built.</div></div>
+	<div class="menu" id="filmsMenu" hidden></div>
+	<div class="body" id="body">
+		<div class="main">
+			<div class="upper">
+				<nav class="rail" id="rail"></nav>
+				<aside class="inspector" id="inspector"></aside>
+				<section class="player">
+					<div class="stage" id="stage">
+						<div class="frame" id="frame"><iframe id="player" src="/player/index.html" title="Film"></iframe></div>
+						<div class="waiting" id="waiting"><div><b>Waiting for your agent</b>Ask it to make a film with Lakr.<br>It appears here as it's built.</div></div>
+						<div class="pick" id="pick" hidden>
+							<textarea id="pickWords" rows="2" placeholder="What should change here?"></textarea>
+							<div class="row"><div class="hint">⇧-click to add more · Esc to close</div><button class="send" id="pickSend" aria-label="Send"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M7 11.5v-9M3 6l4-4 4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
+						</div>
+					</div>
+					<div class="transport">
+						<div class="tc" id="tc">00:00 <span>/ 00:00</span></div>
+						<div class="controls">
+							<button id="toStart" aria-label="To start"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 3v10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M13 3.5v9L5.5 8z" fill="currentColor"/></svg></button>
+							<button id="play" aria-label="Play"><svg width="20" height="20" viewBox="0 0 20 20" id="playIcon"><path d="M6 3.8v12.4L16 10z" fill="currentColor"/></svg></button>
+							<button id="toEnd" aria-label="To end"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M13 3v10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M3 3.5v9L10.5 8z" fill="currentColor"/></svg></button>
+						</div>
+						<div></div>
+					</div>
+				</section>
+			</div>
+			<section class="timeline">
+				<div class="tl-tools">
+					<button class="icon-btn" disabled title="Split (in Lakr for Mac)"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="4.5" cy="5" r="2.2"/><circle cx="4.5" cy="13" r="2.2"/><path d="M6.4 6.2 15 12.5M6.4 11.8 15 5.5"/></svg></button>
+					<button class="icon-btn" disabled title="Trim start (in Lakr for Mac)"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 3v12M15 9H6M9 6 6 9l3 3"/></svg></button>
+					<button class="icon-btn" disabled title="Trim end (in Lakr for Mac)"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M15 3v12M3 9h9M9 6l3 3-3 3"/></svg></button>
+					<button class="icon-btn" id="del" disabled title="Delete clip (⌫)"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3.5 5h11M7 5V3.5h4V5M5 5l.8 9.5h6.4L13 5"/></svg></button>
+					<div class="sep"></div>
+					<button class="icon-btn" id="undo" disabled title="Undo (⌘Z)"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 4 3.5 7l3 3"/><path d="M3.5 7h7a4 4 0 0 1 0 8H8"/></svg></button>
+					<button class="icon-btn" id="redo" disabled title="Redo (⇧⌘Z)"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 4l3 3-3 3"/><path d="M14.5 7h-7a4 4 0 0 0 0 8H10"/></svg></button>
+					<div class="sep"></div>
+					<button class="icon-btn" id="addNote" title="Tell your agent what to add here"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M9 3.5v11M3.5 9h11"/></svg></button>
+					<div class="spacer"></div>
+					<button class="icon-btn on" id="snap" title="Snap to the beat"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3v14M2.5 10h4.5M17.5 10H13M5 7.5 7.5 10 5 12.5M15 7.5 12.5 10l2.5 2.5"/></svg></button>
+					<button class="icon-btn" id="keys" title="Space play · ← → step · ⇧ ← → 1 s · ⌘Z undo · ⌫ delete"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2.5" y="5" width="15" height="10" rx="2"/><path d="M5.5 8h1M8.5 8h1M11.5 8h1M14 8h.5M5.5 10.5h1M8.5 10.5h3M13.5 10.5h1M7 12.8h6" stroke-linecap="round"/></svg></button>
+					<div class="sep"></div>
+					<button class="icon-btn" id="zoomOut" title="Zoom out"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="5"/><path d="m12 12 3 3M6 8h4"/></svg></button>
+					<div class="zoomer" id="zoomer"><div class="dots"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="knob" id="zoomKnob"></div></div>
+					<button class="icon-btn" id="zoomIn" title="Zoom in"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="5"/><path d="m12 12 3 3M6 8h4M8 6v4"/></svg></button>
 				</div>
+				<div class="tl-body">
+					<div class="gutter">
+						<div style="height:94px"></div>
+						<button class="icon-btn" id="mute" title="Sound on" style="margin-top:22px"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h2.5L9 4v10l-3.5-3H3z" fill="currentColor"/><path d="M12 6.5a3.5 3.5 0 0 1 0 5M14 4.5a6.5 6.5 0 0 1 0 9"/></svg></button>
+						<div style="flex:1"></div>
+						<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" style="margin-bottom:14px;color:var(--soft)"><path d="M9 2.5 2.5 6 9 9.5 15.5 6z"/><path d="M2.5 9 9 12.5 15.5 9M2.5 12 9 15.5 15.5 12"/></svg>
+					</div>
+					<div class="tl-scroll" id="tlScroll"><div class="tl-inner" id="tlInner"></div></div>
+				</div>
+			</section>
+		</div>
+		<aside class="film" id="film">
+			<div class="film-head"><h3>Film</h3><button class="icon-btn" id="closeFilm" title="Hide"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button></div>
+			<div class="feed" id="feed"></div>
+			<div class="changes" id="changes" hidden>
+				<h4><svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 1.5c.4 3 1.6 5.2 6.5 6.5-4.9 1.3-6.1 3.5-6.5 6.5-.4-3-1.6-5.2-6.5-6.5C6.4 6.7 7.6 4.5 8 1.5z" fill="var(--orange)"/></svg><span id="changesTitle">Your agent's changes</span></h4>
+				<ul id="changesList"></ul>
+				<div class="row-btns"><button class="btn wide" id="turnUndo">Undo</button><button class="btn wide orange" id="turnKeep">Keep</button></div>
 			</div>
-			<div class="transport">
-				<button class="play" id="play" aria-label="Play"><svg viewBox="0 0 14 14" id="playIcon"><path d="M3 1.8v10.4L12 7z" fill="currentColor"/></svg></button>
-				<div class="time" id="time">0:00.0 / 0:00.0</div>
-				<div class="hint">Pause, click anything in the film, and say what should change.</div>
+			<div class="chips" id="chips"></div>
+			<div class="composer">
+				<textarea id="direct" rows="2" placeholder="Direct the whole film…"></textarea>
+				<div class="row"><div class="hint">Click the film to point</div><button class="send" id="directSend" aria-label="Send"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M7 11.5v-9M3 6l4-4 4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
 			</div>
-		</section>
-		<aside>
-			<div><h3>Brief</h3><div class="brief" id="brief"><span class="muted">Your agent writes the brief before it plans the film.</span></div></div>
-			<div><h3>Notes for your agent</h3><div class="notes" id="notes"></div></div>
-			<div class="renders" id="rendersBox" hidden><h3>Renders</h3><div id="renders"></div></div>
 		</aside>
-	</main>
-	<section class="timeline" id="timeline">
-		<div class="ruler" id="ruler"></div>
-		<div class="tracks" id="tracks"></div>
-		<div class="playhead" id="playhead" hidden></div>
-	</section>
-</div>
-<div class="composer" id="composer">
-	<div class="what" id="what"></div>
-	<textarea id="words" placeholder="What should change? e.g. make this orange and bigger"></textarea>
-	<div class="row"><span class="muted">Enter to send · Esc to close</span><button class="send" id="send">Leave note</button></div>
+	</div>
 </div>
 <div class="toast" id="toast"></div>
 <script>
 (() => {
 	const $ = (id) => document.getElementById(id);
 	const player = $('player');
-	let state = null, film = null, fps = 30, total = 0, frame = 0, playing = false, ready = false, lastFilm = '', selected = null;
-	const fresh = new Set(), broken = new Set();
+	const S = { snap: null, film: null, fps: 30, total: 0, frame: 0, playing: false, ready: false, lastFilm: '', tool: 'scenes', clip: null, element: null, probe: null, zoom: 1, broken: new Set(), fresh: new Set(), muted: false, elements: [] };
 	const lakr = () => player.contentWindow && player.contentWindow.lakr;
-	const fmt = (s) => { s = Math.max(0, s); const m = Math.floor(s / 60); return m + ':' + (s - m * 60).toFixed(1).padStart(4, '0'); };
 	const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-	const toast = (t) => { const el = $('toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 2200); };
+	const tc = (s) => { s = Math.max(0, s); const m = Math.floor(s / 60); return String(m).padStart(2, '0') + ':' + String(Math.floor(s - m * 60)).padStart(2, '0'); };
+	const dur = (s) => { const m = Math.floor(s / 60); return m + ':' + String(Math.round(s - m * 60)).padStart(2, '0'); };
+	const toast = (t) => { const el = $('toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 2400); };
+	const post = (url, body) => fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body || {}) }).then((r) => r.json()).catch(() => ({}));
+	const clipById = (id) => { for (const t of S.film?.tracks || []) for (const c of t.clips) if (c.id === id) return c; return null; };
+	const sceneAt = (sec) => { const t = S.film?.tracks.find((t) => t.id === 'scenes') || S.film?.tracks.find((t) => t.kind !== 'audio'); return t?.clips.find((c) => sec >= c.startSec && sec < c.startSec + c.durationSec) || null; };
 
-	// the picture keeps the film's aspect and fills what space there is
+	// ── rail ──
+	const TOOLS = [
+		{ id: 'scenes', name: 'Scenes', svg: '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="2.5" y="5.5" width="11" height="9" rx="1.5"/><path d="M6 3h9.5A2 2 0 0 1 17.5 5v7.5" stroke-linecap="round"/><path d="M7 8.3v3.4l2.8-1.7z" fill="currentColor" stroke="none"/></svg>' },
+		{ id: 'brief', name: 'Brief', svg: '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 2.5H5.5a1.5 1.5 0 0 0-1.5 1.5v12a1.5 1.5 0 0 0 1.5 1.5h9A1.5 1.5 0 0 0 16 16V7z"/><path d="M11.5 2.5V7H16M7 10.5h6M7 13.5h4"/></svg>' },
+		{ id: 'sound', name: 'Sound', svg: '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 8.5v3M6 6v8M9 3.5v13M12 6.5v7M15 8v4M18 9.3v1.4"/></svg>' },
+	];
+	$('rail').innerHTML = TOOLS.map((t) => `<button data-tool="${t.id}" data-name="${t.name}" aria-label="${t.name}">${t.svg}</button>`).join('');
+	$('rail').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; S.tool = b.dataset.tool; deselect(); drawRail(); drawInspector(); };
+	const drawRail = () => $('rail').querySelectorAll('button').forEach((b) => b.classList.toggle('on', !S.element && b.dataset.tool === S.tool));
+
+	// ── the picture keeps the film's shape on the dark stage ──
 	const fit = () => {
-		if (!film) return;
-		const W = $('wrap').clientWidth, H = $('wrap').clientHeight, a = film.width / film.height;
-		const w = Math.min(W, H * a), h = w / a;
+		if (!S.film) return;
+		const st = $('stage'), W = st.clientWidth - 36, H = st.clientHeight - 36, a = S.film.width / S.film.height;
+		const w = Math.max(10, Math.min(W, H * a)), h = w / a;
 		$('frame').style.width = w + 'px'; $('frame').style.height = h + 'px';
 	};
-	new ResizeObserver(fit).observe($('wrap'));
+	new ResizeObserver(() => { fit(); drawTimeline(); }).observe($('stage'));
 
-	const setStatus = (words, kind) => { $('status').textContent = words; $('dot').className = 'dot ' + (kind || ''); };
-
+	// ── state from the server ──
 	async function pull() {
-		const r = await fetch('/api/film', { cache: 'no-store' });
-		state = await r.json();
-		$('filmName').textContent = state.name || '';
-		document.title = state.name ? state.name + ' · Lakr Preview' : 'Lakr Preview';
-		$('brief').innerHTML = state.brief ? esc(state.brief) : '<span class="muted">Your agent writes the brief before it plans the film.</span>';
-		drawNotes(); drawRenders();
-		if (!state.film) { film = null; $('empty').hidden = false; drawTimeline(); return; }
-		const before = film;
-		film = state.film; fps = film.fps; total = state.duration || 0;
-		$('empty').hidden = total > 0;
+		let snap;
+		try { snap = await (await fetch('/api/film', { cache: 'no-store' })).json(); } catch { return; }
+		S.snap = snap;
+		$('filmName').textContent = snap.name || 'Lakr';
+		document.title = (snap.name ? snap.name + ' · ' : '') + 'Lakr';
+		$('changesTitle').textContent = (snap.agent || 'Your agent') + '’s changes';
+		drawTop(); drawFeed(); drawChanges();
+		if (!snap.film) { S.film = null; $('waiting').hidden = false; drawTimeline(); drawInspector(); return; }
+		const before = S.film;
+		S.film = snap.film; S.fps = snap.film.fps; S.total = snap.duration || 0;
+		$('waiting').hidden = S.total > 0;
 		fit();
-		// clips that just got code flash as they land
 		if (before) {
-			const old = new Map(before.tracks.flatMap((t) => t.clips.map((c) => [c.id, JSON.stringify(c) + JSON.stringify(c.module ? before.modules[c.module] : null)])));
-			for (const t of film.tracks) for (const c of t.clips) {
-				const now = JSON.stringify(c) + JSON.stringify(c.module ? film.modules[c.module] : null);
-				if (!c.pending && old.get(c.id) !== now) fresh.add(c.id);
-			}
+			const sig = (f, c) => JSON.stringify(c) + JSON.stringify(c.module ? f.modules[c.module] : null);
+			const old = new Map(before.tracks.flatMap((t) => t.clips.map((c) => [c.id, sig(before, c)])));
+			for (const t of S.film.tracks) for (const c of t.clips) if (!c.pending && old.get(c.id) !== sig(S.film, c)) S.fresh.add(c.id);
 		}
-		const key = JSON.stringify(film);
-		if (key !== lastFilm && ready) {
-			lastFilm = key;
-			broken.clear();
-			const keep = Math.min(frame, Math.max(0, Math.round(total * fps) - 1));
-			lakr().setTimeline(film);
-			setTimeout(() => { lakr().seek(keep); }, 60);
+		const key = JSON.stringify(S.film);
+		if (key !== S.lastFilm && S.ready) {
+			S.lastFilm = key; S.broken.clear();
+			const keep = Math.min(S.frame, Math.max(0, Math.round(S.total * S.fps) - 1));
+			lakr().setTimeline(S.film);
+			setTimeout(() => { lakr().seek(keep); if (S.element) lakr().setSelected([S.element]); refreshProbe(); refreshElements(); drawInspector(); }, 120);
 		}
-		drawTimeline();
-		setTimeout(() => fresh.clear(), 900);
+		if (S.clip && !clipById(S.clip)) { S.clip = null; S.element = null; }
+		drawTimeline(); drawInspector();
+		setTimeout(() => S.fresh.clear(), 1000);
 	}
 
-	function drawTimeline() {
-		const tracks = $('tracks'), ruler = $('ruler');
-		tracks.innerHTML = ''; ruler.innerHTML = '';
-		if (!film || !total) { $('playhead').hidden = true; return; }
-		const step = total > 60 ? 10 : total > 20 ? 5 : total > 8 ? 2 : 1;
-		for (let s = 0; s <= total + 0.001; s += step) ruler.insertAdjacentHTML('beforeend', `<span style="left:${(s / total) * 100}%">${s}s</span>`);
-		for (const t of film.tracks) {
-			if (!t.clips.length) continue;
-			const row = document.createElement('div');
-			row.className = 'track' + (t.kind === 'audio' ? ' audio' : '');
-			row.innerHTML = `<div class="label" title="${esc(t.name || t.id)}">${esc(t.name || t.id)}</div><div class="lane"></div>`;
-			const lane = row.lastChild;
-			for (const c of t.clips) {
-				const el = document.createElement('div');
-				const kind = c.pending ? ' pending' : c.kind === 'audio' ? ' audio' : (c.kind === 'image' || c.kind === 'recording') ? ' media' : '';
-				el.className = 'clip' + kind + (broken.has(c.id) ? ' broken' : '') + (fresh.has(c.id) ? ' fresh' : '');
-				el.style.left = (c.startSec / total) * 100 + '%';
-				el.style.width = `calc(${(c.durationSec / total) * 100}% - 2px)`;
-				el.title = (c.name || c.id) + (c.note ? '\n' + c.note : '');
-				el.innerHTML = `<b>${esc(c.name || c.id)}</b>` + (t.kind === 'audio' ? '' : `<small>${esc(c.pending ? (c.note || 'Writing…') : (c.note || c.id))}</small>`);
-				el.onclick = (e) => { e.stopPropagation(); seekSec(c.startSec + Math.min(0.4, c.durationSec / 3)); };
-				lane.appendChild(el);
-			}
-			lane.onclick = (e) => { const r = lane.getBoundingClientRect(); seekSec(((e.clientX - r.left) / r.width) * total); };
-			tracks.appendChild(row);
+	function drawTop() {
+		const r = S.snap?.render;
+		const exp = $('export');
+		if (r && r.running) { exp.textContent = 'Exporting ' + r.pct + '%'; exp.disabled = true; }
+		else { exp.textContent = 'Export'; exp.disabled = !S.snap?.film; }
+		const last = S.snap?.renders?.[0];
+		$('openRender').hidden = !last || (r && r.running);
+		if (last) $('openRender').onclick = () => window.open('/renders/' + encodeURIComponent(last.file.replace(/^renders\//, '')), '_blank');
+		if (r && r.error && !r.running) setStatus('Export failed: ' + r.error);
+		if (r && r.running) { clearTimeout(drawTop.t); drawTop.t = setTimeout(pull, 1000); }
+		const t = S.snap?.turn;
+		$('undo').disabled = !t?.canUndo; $('redo').disabled = !t?.canRedo;
+	}
+	const setStatus = (words) => { $('status').textContent = words; };
+
+	// ── film column ──
+	function drawFeed() {
+		const feed = $('feed'), chat = S.snap?.chat || [];
+		const atBottom = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 40;
+		const notes = S.snap?.notes || [];
+		let html = chat.length ? '' : `<div class="welcome">${S.snap?.film ? 'Your agent is working on this film. What it says and does shows here.' : 'Ask your agent to make a film with Lakr. Its brief, its scenes and what it changes show here as it works.'}<br><br>Pause the film and click anything to change it, or direct the whole film below.</div>`;
+		for (const m of chat) {
+			if (m.kind === 'act') { html += `<div class="msg act">${esc(m.text)}</div>`; continue; }
+			if (m.from === 'agent') { html += `<div class="msg">${esc(m.text)}</div>`; continue; }
+			const hit = m.text.match(/^([a-z][\w-]*:[^\s:]+): ([\s\S]*)$/);
+			const el = hit ? hit[1] : null, words = hit ? hit[2] : m.text;
+			const n = notes.find((x) => x.words === words);
+			html += `<div class="msg me">${el ? `<span class="el">${esc(el)}</span>` : ''}${esc(words)}${n ? `<span class="state">${n.state === 'taken' ? 'Your agent is on it' : 'Waiting for your agent'}</span>` : ''}</div>`;
 		}
-		ruler.onclick = (e) => { const r = ruler.getBoundingClientRect(); seekSec(((e.clientX - r.left) / r.width) * total); };
+		if (notes.some((n) => n.state === 'new')) html += `<div class="msg act">Tell your agent “apply my Lakr notes” to pick these up</div>`;
+		feed.innerHTML = html;
+		if (atBottom || !drawFeed.done) feed.scrollTop = feed.scrollHeight;
+		drawFeed.done = true;
+	}
+	function drawChanges() {
+		const t = S.snap?.turn;
+		$('changes').hidden = !t?.open;
+		$('changesList').innerHTML = (t?.lines || []).slice(-6).map((l) => `<li>${esc(l)}</li>`).join('') || '<li>Changes to the film</li>';
+	}
+	$('turnKeep').onclick = async () => { await post('/api/turn', { keep: true }); pull(); };
+	$('turnUndo').onclick = async () => { await post('/api/turn', { keep: false }); toast('Undone. Your agent will hear about it.'); pull(); };
+	const CHIPS = ['Show the product more', 'Make it punchier', 'Slower, calmer', 'Shorter copy', 'Add sound'];
+	$('chips').innerHTML = CHIPS.map((c) => `<button>${c}</button>`).join('');
+	$('chips').onclick = (e) => { const b = e.target.closest('button'); if (b) sendNote({ words: b.textContent }); };
+	const directReady = () => $('directSend').classList.toggle('ready', !!$('direct').value.trim());
+	$('direct').addEventListener('input', directReady);
+	$('direct').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('directSend').click(); } });
+	$('directSend').onclick = () => { const w = $('direct').value.trim(); if (!w) return; sendNote({ words: w }); $('direct').value = ''; directReady(); };
+	$('closeFilm').onclick = () => { $('body').classList.add('film-closed'); $('film').hidden = true; toast('Film column hidden. Press F to bring it back.'); };
+
+	async function sendNote(n) {
+		if (!S.snap?.film) return toast('Start a film first: ask your agent.');
+		const r = await post('/api/notes', n);
+		if (r.error) return toast(r.error);
+		toast('Sent. Tell your agent to apply your Lakr notes.');
+		pull();
+	}
+
+	// ── timeline ──
+	const PX = () => (Math.max(300, $('tlScroll').clientWidth - 40) / Math.max(S.total || 10, 1)) * S.zoom;
+	const FILM_ICON = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1.5" y="2.5" width="9" height="7" rx="1"/><path d="M1.5 5h9M4 2.5v7"/></svg>';
+	function drawTimeline() {
+		const inner = $('tlInner');
+		if (!S.film || !S.total) { inner.innerHTML = '<div class="ruler"></div><div class="lane">Your agent lays the film out here as scene cards</div>'; return; }
+		const px = PX(), W = S.total * px;
+		inner.style.width = (W + 40) + 'px';
+		let html = `<div class="ruler" id="ruler" style="width:${W}px">`;
+		const step = [1, 2, 5, 10, 15, 30, 60].find((s) => s * px >= 70) || 60;
+		for (let s = 0; s <= S.total + 0.001; s += step) html += `<span style="left:${s * px}px">${tc(s)}</span>`;
+		for (let s = 0; s <= S.total + 0.001; s += step / 2) html += `<i style="left:${s * px}px"></i>`;
+		html += `</div><div class="lane" id="zoomLane" style="width:${W}px">+ Click or drag to add zoom</div>`;
+		for (const t of S.film.tracks.filter((t) => t.kind !== 'audio' && t.clips.length)) {
+			html += `<div class="track" style="width:${W}px">`;
+			for (const c of t.clips) {
+				const cls = ['piece', c.pending ? 'pending' : '', (c.kind === 'image' || c.kind === 'recording') ? 'media' : '', S.clip === c.id ? 'on' : '', S.broken.has(c.id) ? 'broken' : '', S.fresh.has(c.id) ? 'fresh' : ''].join(' ');
+				html += `<div class="${cls}" data-clip="${esc(c.id)}" style="left:${c.startSec * px}px;width:${Math.max(6, c.durationSec * px - 3)}px" title="${esc((c.name || c.id) + (c.note ? '\n' + c.note : ''))}">`
+					+ `<div class="chip">${FILM_ICON}${esc(c.name || c.id)} <span>${dur(c.durationSec)}</span></div>`
+					+ `<div class="name">${FILM_ICON}${esc(c.name || c.id)}</div>`
+					+ (c.pending ? `<div class="note">${esc(c.note || 'Being written…')}</div>` : c.note ? `<div class="note">${esc(c.note)}</div>` : '')
+					+ '</div>';
+			}
+			html += '</div>';
+		}
+		for (const t of S.film.tracks.filter((t) => t.kind === 'audio' && t.clips.length)) {
+			html += `<div class="track audio" style="width:${W}px">` + t.clips.map((c) => `<div class="piece sound ${S.clip === c.id ? 'on' : ''}" data-clip="${esc(c.id)}" style="left:${c.startSec * px}px;width:${Math.max(6, c.durationSec * px - 3)}px" title="${esc(c.name || c.id)}"><div class="name">${esc(c.name || c.id)}</div></div>`).join('') + '</div>';
+		}
+		// the elements of the scene under the playhead, as rows beneath it (the editor's element rows)
+		const sc = sceneAt(S.frame / S.fps);
+		const els = sc && !sc.pending ? S.elements : [];
+		if (els.length) {
+			html += `<div class="elrows" style="height:${els.length * 38}px">` + els.map((e, i) => `<div class="elrow ${S.element === e.key ? 'on' : ''}" data-el="${esc(e.key)}" style="top:${i * 38}px;left:${sc.startSec * px}px;width:${Math.max(120, sc.durationSec * px - 3)}px">${esc(e.name.split(' · ')[0])}</div>`).join('') + '</div>';
+		}
+		html += '<div class="playhead" id="playhead"></div>';
+		inner.innerHTML = html;
 		movePlayhead();
 	}
-
 	function movePlayhead() {
-		const ph = $('playhead'), ruler = $('ruler');
-		if (!film || !total) { ph.hidden = true; return; }
-		ph.hidden = false;
-		const r = ruler.getBoundingClientRect(), box = $('timeline').getBoundingClientRect();
-		ph.style.left = (r.left - box.left + (frame / fps / total) * r.width - 1) + 'px';
-		$('time').textContent = fmt(frame / fps) + ' / ' + fmt(total);
+		const ph = $('playhead');
+		if (ph && S.total) ph.style.left = (16 + (S.frame / S.fps) * PX()) + 'px';
+		$('tc').innerHTML = tc(S.frame / S.fps) + ' <span>/ ' + tc(S.total) + '</span>';
 	}
-
-	const seekSec = (s) => { if (!ready || !film) return; closeComposer(); lakr().pause(); frame = Math.max(0, Math.min(Math.round(s * fps), Math.round(total * fps) - 1)); lakr().seek(frame); movePlayhead(); };
-
-	function drawNotes() {
-		const box = $('notes'), notes = (state && state.notes) || [];
-		if (!notes.length) { box.innerHTML = '<div class="muted">None yet. Pause the film and click an element to leave one.</div>'; return; }
-		box.innerHTML = notes.map((n) => `<div class="note"><div class="el">${esc(n.element || (n.clip ? 'clip ' + n.clip : 'film'))}${n.atSec != null ? ' · ' + n.atSec + 's' : ''}</div>${esc(n.words)}<div class="state">${n.state === 'taken' ? 'Your agent is on it' : 'Waiting for your agent'}</div><button class="x" data-id="${n.id}" title="Remove">✕</button></div>`).join('')
-			+ (notes.some((n) => n.state === 'new') ? `<div class="callout">Tell your agent:<code>Apply my Lakr notes</code><button class="copy" id="copyAsk">Copy</button></div>` : '');
-		box.querySelectorAll('.x').forEach((b) => (b.onclick = async () => { await fetch('/api/notes/' + b.dataset.id, { method: 'DELETE' }); pull(); }));
-		const c = $('copyAsk'); if (c) c.onclick = () => navigator.clipboard.writeText('Apply my Lakr notes').then(() => toast('Copied. Paste it to your agent.'));
-	}
-
-	function drawRenders() {
-		const list = (state && state.renders) || [];
-		$('rendersBox').hidden = !list.length;
-		$('renders').innerHTML = list.map((r) => { const name = r.file.replace(/^renders\//, ''); return `<a href="/renders/${encodeURIComponent(name)}" target="_blank">${esc(name)}</a>`; }).join('');
-	}
-
-	// ── click an element, say what to change ──
-	function openComposer(m) {
-		const key = m.keys[0];
-		const doc = player.contentDocument;
-		const el = doc && doc.querySelector('[data-lakr="' + CSS.escape(key) + '"]');
-		const words = el ? (el.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 80) : '';
-		selected = { element: key, clip: key.split(':')[0], atSec: Math.round((m.frame / fps) * 100) / 100, text: words || null, rect: (m.rects && m.rects[0]) || null };
-		$('what').textContent = key + (words ? ' · “' + words.slice(0, 40) + '”' : '');
-		const vp = m.viewport, fr = player.getBoundingClientRect(), r = selected.rect;
-		let x = fr.left + fr.width / 2 - 160, y = fr.top + 20;
-		if (vp && r) {
-			const sx = fr.left + vp.offsetX + (r.x + r.w) * vp.scale + 12, sy = fr.top + vp.offsetY + r.y * vp.scale;
-			x = sx + 320 > innerWidth - 12 ? fr.left + vp.offsetX + r.x * vp.scale - 332 : sx;
-			y = sy;
+	const secAt = (e) => { const r = $('tlInner').getBoundingClientRect(); return Math.max(0, Math.min(S.total, (e.clientX - r.left - 16) / PX())); };
+	$('tlInner').addEventListener('click', (e) => {
+		if (!S.film) return;
+		const row = e.target.closest('.elrow');
+		if (row) { selectElement(row.dataset.el); return; }
+		const p = e.target.closest('.piece');
+		if (p) {
+			const c = clipById(p.dataset.clip);
+			deselect();
+			S.clip = p.dataset.clip;
+			if (c && c.kind !== 'audio') seek(Math.max(c.startSec, Math.min(secAt(e), c.startSec + c.durationSec - 0.05)));
+			S.tool = c && c.kind === 'audio' ? 'sound' : 'scenes';
+			$('del').disabled = false; drawRail(); drawInspector(); drawTimeline();
+			return;
 		}
-		const c = $('composer');
-		c.style.left = Math.max(12, Math.min(x, innerWidth - 332)) + 'px';
-		c.style.top = Math.max(56, Math.min(y, innerHeight - 170)) + 'px';
-		c.classList.add('show');
-		$('words').value = '';
-		setTimeout(() => $('words').focus(), 30);
-	}
-	function closeComposer() { $('composer').classList.remove('show'); selected = null; try { lakr() && lakr().clearSelection(); } catch (e) {} }
-	async function sendNote() {
-		const words = $('words').value.trim();
-		if (!words || !selected) return;
-		$('send').disabled = true;
-		try {
-			const r = await fetch('/api/notes', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...selected, words }) });
-			if (!r.ok) throw new Error();
-			closeComposer();
-			toast('Note left. Tell your agent to apply your notes.');
-			pull();
-		} catch (e) { toast('Could not save the note. Is your agent still running?'); }
-		$('send').disabled = false;
-	}
-	$('send').onclick = sendNote;
-	$('words').addEventListener('keydown', (e) => {
-		if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendNote(); }
-		if (e.key === 'Escape') closeComposer();
+		if (e.target.closest('#zoomLane')) { openPickAt(secAt(e), 'What zoom should go here?', 'Add a zoom here: '); return; }
+		seek(secAt(e));
 	});
+	let scrubbing = false;
+	$('tlInner').addEventListener('pointerdown', (e) => { if (e.target.closest('#ruler')) { scrubbing = true; seek(secAt(e)); } });
+	addEventListener('pointermove', (e) => { if (scrubbing) seek(secAt(e)); });
+	addEventListener('pointerup', () => (scrubbing = false));
 
-	// ── the player ──
+	const setZoom = (z) => { S.zoom = Math.max(1, Math.min(8, z)); $('zoomKnob').style.left = ((Math.log2(S.zoom) / 3) * 132 + 4) + 'px'; drawTimeline(); };
+	$('zoomIn').onclick = () => setZoom(S.zoom * 1.5);
+	$('zoomOut').onclick = () => setZoom(S.zoom / 1.5);
+	$('zoomer').addEventListener('pointerdown', (e) => {
+		const move = (ev) => { const r = $('zoomer').getBoundingClientRect(); setZoom(2 ** (3 * Math.max(0, Math.min(1, (ev.clientX - r.left - 4) / 132)))); };
+		move(e); $('zoomer').setPointerCapture(e.pointerId);
+		$('zoomer').onpointermove = move; $('zoomer').onpointerup = () => ($('zoomer').onpointermove = null);
+	});
+	setZoom(1);
+
+	$('undo').onclick = async () => { await post('/api/undo'); pull(); };
+	$('redo').onclick = async () => { await post('/api/redo'); pull(); };
+	$('del').onclick = async () => { if (!S.clip) return; const c = clipById(S.clip); await post('/api/remove', { clip: S.clip }); S.clip = null; $('del').disabled = true; toast('Deleted “' + (c?.name || c?.id) + '”. ⌘Z brings it back.'); pull(); };
+	$('addNote').onclick = () => openPickAt(S.frame / S.fps, 'What should your agent add here?', '');
+	$('snap').onclick = () => $('snap').classList.toggle('on');
+	$('mute').onclick = () => { S.muted = !S.muted; $('mute').style.opacity = S.muted ? 0.4 : 1; try { player.contentDocument.querySelectorAll('audio,video').forEach((m) => (m.muted = S.muted)); } catch {} };
+
+	// ── player ──
+	const seek = (sec) => {
+		if (!S.ready || !S.film) return;
+		lakr().pause();
+		S.frame = Math.max(0, Math.min(Math.round(sec * S.fps), Math.round(S.total * S.fps) - 1));
+		lakr().seek(S.frame);
+		movePlayhead();
+		refreshElements();
+	};
+	$('play').onclick = () => { if (!S.ready || !S.total) return; closePick(); if (S.playing) lakr().pause(); else { if (S.frame >= Math.round(S.total * S.fps) - 1) lakr().seek(0); lakr().play(); } };
+	$('toStart').onclick = () => seek(0);
+	$('toEnd').onclick = () => seek(S.total);
+	let elTimer = null;
+	function refreshElements() {
+		clearTimeout(elTimer);
+		elTimer = setTimeout(() => {
+			const sc = sceneAt(S.frame / S.fps);
+			const list = sc && !sc.pending && lakr() ? lakr().elementsOf(sc.id) || [] : [];
+			const sig = JSON.stringify(list);
+			if (sig !== refreshElements.sig) { refreshElements.sig = sig; S.elements = list; drawTimeline(); }
+		}, 140);
+	}
+
+	// ── pick an element: the orange box and its name (the player draws them), "what should change here?" ──
+	function deselect() { S.element = null; S.selectedKeys = []; try { lakr() && lakr().clearSelection(); } catch {} closePick(); }
+	function selectElement(key) {
+		if (!lakr()) return;
+		lakr().setSelected([key]);
+		S.element = key; S.selectedKeys = [key]; S.clip = key.split(':')[0];
+		refreshProbe(); openPickFor(key);
+		drawRail(); drawInspector(); drawTimeline();
+	}
+	function refreshProbe() {
+		if (!S.element || !lakr()) { S.probe = null; return; }
+		try {
+			const doc = player.contentDocument, el = doc.querySelector('[data-lakr="' + CSS.escape(S.element) + '"]'), root = doc.querySelector('[data-lakr-root]');
+			if (!el || !root) { S.probe = null; return; }
+			const R = root.getBoundingClientRect(), q = el.getBoundingClientRect();
+			const hit = lakr().probe((q.left + q.width / 2 - R.left) / R.width, (q.top + q.height / 2 - R.top) / R.height);
+			const found = (hit || []).find((p) => p.key === S.element);
+			S.probe = found ? { ...found, text: String(found.text || '').replace(/\s+/g, ' ').trim() } : { key: S.element, name: S.element, text: (el.innerText || '').replace(/\s+/g, ' ').trim(), look: {} };
+			// what the picture shows now: the deepest element carrying the words (font-size is in film pixels)
+			let t = el; for (const n of el.querySelectorAll('*')) if ((n.textContent || '').trim() && !n.children.length) { t = n; break; }
+			const cs = player.contentWindow.getComputedStyle(t), fs = parseFloat(cs.fontSize) || 0;
+			S.probe.seen = { size: fs, tracking: cs.letterSpacing === 'normal' || !fs ? 0 : parseFloat(cs.letterSpacing) / fs, weight: cs.fontWeight };
+		} catch { S.probe = null; }
+	}
+	function openPickFor(key) {
+		const fr = $('frame').getBoundingClientRect(), st = $('stage').getBoundingClientRect();
+		let x = fr.left - st.left + fr.width / 2 - 190, y = fr.top - st.top + fr.height * 0.55;
+		try {
+			const q = player.contentDocument.querySelector('[data-lakr="' + CSS.escape(key) + '"]').getBoundingClientRect();
+			x = fr.left - st.left + q.left + q.width / 2 - 190;
+			y = fr.top - st.top + q.bottom + 12;
+			if (y + 130 > st.height) y = Math.max(12, fr.top - st.top + q.top - 142);
+		} catch {}
+		S.pickPrefix = '';
+		showPick(x, y, 'What should change here?');
+	}
+	function openPickAt(sec, placeholder, prefix) {
+		deselect();
+		seek(sec);
+		S.pickAt = sec; S.pickPrefix = prefix;
+		const fr = $('frame').getBoundingClientRect(), st = $('stage').getBoundingClientRect();
+		showPick(fr.left - st.left + fr.width / 2 - 190, fr.top - st.top + fr.height / 2 - 60, placeholder);
+	}
+	function showPick(x, y, placeholder) {
+		const st = $('stage'), p = $('pick');
+		p.hidden = false;
+		p.style.left = Math.max(12, Math.min(x, st.clientWidth - 392)) + 'px';
+		p.style.top = Math.max(12, Math.min(y, st.clientHeight - 130)) + 'px';
+		$('pickWords').placeholder = placeholder;
+		$('pickWords').value = '';
+		pickReady();
+		setTimeout(() => $('pickWords').focus(), 20);
+	}
+	function closePick() { $('pick').hidden = true; }
+	const pickReady = () => $('pickSend').classList.toggle('ready', !!$('pickWords').value.trim());
+	$('pickWords').addEventListener('input', pickReady);
+	$('pickWords').addEventListener('keydown', (e) => {
+		if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('pickSend').click(); }
+		if (e.key === 'Escape') closePick();
+	});
+	$('pickSend').onclick = async () => {
+		const words = $('pickWords').value.trim();
+		if (!words) return;
+		const keys = (S.selectedKeys || []).length ? S.selectedKeys : S.element ? [S.element] : [];
+		const at = Math.round((S.element ? S.frame / S.fps : S.pickAt ?? S.frame / S.fps) * 100) / 100;
+		const prefix = keys.length > 1 ? 'Together with ' + keys.slice(1).join(', ') + ': ' : (S.pickPrefix || '');
+		await sendNote({ element: keys[0] || null, clip: keys[0] ? keys[0].split(':')[0] : (sceneAt(at)?.id || null), atSec: at, text: keys[0] ? S.probe?.text || null : null, words: prefix + words });
+		closePick();
+	};
+
+	// ── inspector ──
+	const FONTS = [['', 'As written'], ['mona', 'Mona Sans'], ['geist', 'Geist'], ['instrument', 'Instrument Sans'], ['hanken', 'Hanken Grotesk'], ['schibsted', 'Schibsted Grotesk'], ['bricolage', 'Bricolage Grotesque'], ['funnel', 'Funnel Display'], ['jakarta', 'Plus Jakarta Sans'], ['sora', 'Sora'], ['hubot', 'Hubot Sans'], ['instrument-serif', 'Instrument Serif'], ['newsreader', 'Newsreader'], ['fraunces', 'Fraunces']];
+	const WEIGHTS = [['', 'As written'], ['300', 'Light'], ['400', 'Regular'], ['500', 'Medium'], ['600', 'Semibold'], ['700', 'Bold'], ['800', 'Extra bold']];
+	// AlignSlider: the range runs from just after the label to the value's edge
+	const LEFT = 78, RIGHT = 16;
+	const at = (f) => `calc(${LEFT}px + (100% - ${LEFT + RIGHT}px) * ${f.toFixed(4)})`;
+	function slider(id, name, value, min, max, step, fmt) {
+		const f = Math.max(0, Math.min(1, (value - min) / (max - min)));
+		return `<div class="slider" id="${id}" data-min="${min}" data-max="${max}" data-step="${step}" data-value="${value}"><div class="fill" style="width:${at(f)}"></div><div class="dots">${'<i></i>'.repeat(6)}</div><div class="name">${name}</div><div class="val">${fmt(value)}</div><div class="knob" style="left:${at(f)}"></div></div>`;
+	}
+	function bindSlider(id, fmt, done) {
+		const el = $(id); if (!el) return;
+		const min = +el.dataset.min, max = +el.dataset.max, step = +el.dataset.step;
+		const set = (v) => { const f = (v - min) / (max - min); el.querySelector('.fill').style.width = at(f); el.querySelector('.knob').style.left = at(f); el.querySelector('.val').textContent = fmt(v); el.dataset.value = v; };
+		el.addEventListener('pointerdown', (e) => {
+			el.setPointerCapture(e.pointerId);
+			const move = (ev) => { const r = el.getBoundingClientRect(); let v = min + Math.max(0, Math.min(1, (ev.clientX - r.left - LEFT) / (r.width - LEFT - RIGHT))) * (max - min); v = Math.round(v / step) * step; set(+v.toFixed(3)); };
+			move(e);
+			el.onpointermove = move;
+			el.onpointerup = () => { el.onpointermove = null; done(+el.dataset.value); };
+		});
+	}
+	const lookOf = () => { const c = clipById(S.clip); const el = S.element?.split(':').slice(1).join(':'); return { ...(c?.elements?.[el]?.look || {}) }; };
+	async function setLook(patch) { await post('/api/look', { clip: S.clip, element: S.element, look: patch }); pull(); }
+
+	function drawInspector() {
+		const box = $('inspector');
+		if (S.element && S.film) {
+			const p = S.probe || {}, look = lookOf(), seen = p.seen || {};
+			const sc = clipById(S.clip);
+			const into = sc ? Math.max(0, S.frame / S.fps - sc.startSec) : 0;
+			const size = +(look.size || Math.round(seen.size) || 64), track = +(look.tracking ?? (seen.tracking || 0));
+			const pal = S.film.look?.palette || {};
+			const colors = [...new Set([pal.ink, pal.accent, pal.accent2, pal.ground, '#FFFFFF', '#121214', '#E16614'].filter(Boolean))];
+			box.innerHTML = `<button class="btn done" id="done"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M7.5 2.5 4 6l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Done</button>
+				<div><h2>${esc(p.name || S.element)}</h2></div>
+				<div class="lede">At ${into.toFixed(2)} s into the scene. Changes land at the playhead.</div>
+				${p.text ? `<div><div class="label">Text</div><div class="field">${esc(p.text)}</div><div class="hint">To change the words, say so in the box on the picture.</div></div>` : ''}
+				<div><div class="label">Font</div><div class="select"><select id="font">${FONTS.map(([v, n]) => `<option value="${v}" ${String(look.font || '') === v ? 'selected' : ''}>${n}</option>`).join('')}</select></div></div>
+				${slider('size', 'Size', Math.round(size), 8, 400, 1, (v) => Math.round(v) + ' px')}
+				<div><div class="label">Weight</div><div class="select"><select id="weight">${WEIGHTS.map(([v, n]) => `<option value="${v}" ${String(look.weight || '') === v ? 'selected' : ''}>${n}</option>`).join('')}</select></div></div>
+				${slider('tracking', 'Spacing', +track.toFixed(2), -0.1, 0.3, 0.01, (v) => v.toFixed(2) + ' em')}
+				<div><div class="label">Colour</div><div class="swatches">${colors.map((c) => `<button class="swatch ${String(look.color || '').toLowerCase() === c.toLowerCase() ? 'on' : ''}" data-c="${esc(c)}" style="background:${esc(c)}" title="${esc(c)}"></button>`).join('')}<input type="color" id="colorPick" value="${/^#[0-9a-f]{6}$/i.test(look.color || '') ? look.color : '#ffffff'}" title="Any colour"></div></div>
+				${Object.keys(look).length ? '<button class="btn" id="resetLook">Back to how your agent wrote it</button>' : ''}`;
+			$('done').onclick = () => { deselect(); drawRail(); drawInspector(); drawTimeline(); };
+			$('font').onchange = (e) => setLook({ font: e.target.value || null });
+			$('weight').onchange = (e) => setLook({ weight: e.target.value || null });
+			bindSlider('size', (v) => Math.round(v) + ' px', (v) => setLook({ size: String(Math.round(v)) }));
+			bindSlider('tracking', (v) => v.toFixed(2) + ' em', (v) => setLook({ tracking: v.toFixed(2) }));
+			box.querySelectorAll('.swatch').forEach((b) => (b.onclick = () => setLook({ color: b.dataset.c })));
+			$('colorPick').onchange = (e) => setLook({ color: e.target.value });
+			if ($('resetLook')) $('resetLook').onclick = () => setLook({ font: null, size: null, weight: null, color: null, tracking: null });
+			return;
+		}
+		if (!S.film) { box.innerHTML = `<div><h2>Scenes</h2></div><div class="empty-note">Your agent lays the film out as scenes. They show here, and on the timeline below, as it writes them.</div>`; return; }
+		if (S.tool === 'brief') {
+			box.innerHTML = `<div><h2>Brief</h2></div>` + (S.snap?.brief ? `<div class="lede" style="margin-top:-6px">${esc(S.snap.brief)}</div>` : '') + (S.snap?.fullBrief ? `<div class="brief-full">${esc(S.snap.fullBrief)}</div>` : `<div class="empty-note">Your agent writes the brief before it plans the film: the beats, the exact words, the sound.</div>`);
+			return;
+		}
+		if (S.tool === 'sound') {
+			const clips = S.film.tracks.filter((t) => t.kind === 'audio').flatMap((t) => t.clips);
+			box.innerHTML = `<div><h2>Sound</h2></div>` + (clips.length ? `<div class="list">${clips.map((c) => `<div><div class="item ${S.clip === c.id ? 'on' : ''}" data-clip="${esc(c.id)}"><b>${esc(c.name || c.id)}<span>${c.startSec.toFixed(1)} s</span></b></div><div style="height:6px"></div>${slider('vol-' + c.id, 'Volume', Math.round((c.volume ?? 1) * 100), 0, 150, 1, (v) => Math.round(v) + '%')}</div>`).join('')}</div>` : `<div class="empty-note">No sound yet. Ask your agent for music or sound effects, or tap “Add sound” in the Film column.</div>`);
+			for (const c of clips) bindSlider('vol-' + c.id, (v) => Math.round(v) + '%', async (v) => { await post('/api/clip', { clip: c.id, volume: v / 100 }); pull(); });
+			box.querySelectorAll('.item').forEach((it) => (it.onclick = () => { S.clip = it.dataset.clip; const c = clipById(S.clip); if (c) seek(c.startSec); $('del').disabled = false; drawInspector(); drawTimeline(); }));
+			return;
+		}
+		const scenes = S.film.tracks.filter((t) => t.kind !== 'audio').flatMap((t) => t.clips).sort((a, b) => a.startSec - b.startSec);
+		box.innerHTML = `<div><h2>Scenes</h2></div><div class="lede">${scenes.length} scene${scenes.length === 1 ? '' : 's'} · ${S.total.toFixed(1)} s. Click one to go to it, then click anything in the picture to change it.</div>`
+			+ `<div class="list">${scenes.map((c) => `<div class="item ${S.clip === c.id ? 'on' : ''}" data-clip="${esc(c.id)}"><b>${esc(c.name || c.id)}<span>${c.startSec.toFixed(1)}–${(c.startSec + c.durationSec).toFixed(1)} s</span></b>${c.note ? `<small>${esc(c.note)}</small>` : ''}${c.pending ? '<small style="color:var(--orange)">Being written</small>' : ''}</div>`).join('')}</div>`;
+		box.querySelectorAll('.item').forEach((it) => (it.onclick = () => { S.clip = it.dataset.clip; const c = clipById(S.clip); if (c) seek(c.startSec + Math.min(0.5, c.durationSec / 3)); $('del').disabled = false; drawInspector(); drawTimeline(); }));
+	}
+
+	// ── the player's messages ──
 	addEventListener('message', (e) => {
 		if (e.origin !== location.origin || !e.data || !e.data.lakr) return;
 		const m = e.data.lakr;
 		switch (m.type) {
-			case 'loaded': ready = true; lastFilm = ''; pull(); break;
-			case 'frame': frame = m.frame; movePlayhead(); break;
-			case 'playing': playing = m.playing; $('playIcon').innerHTML = playing ? '<path d="M3 2h3v10H3zM8 2h3v10H8z" fill="currentColor"/>' : '<path d="M3 1.8v10.4L12 7z" fill="currentColor"/>'; if (playing) closeComposer(); break;
-			case 'select': if (m.keys && m.keys.length) { if (playing) lakr().pause(); openComposer(m); } else closeComposer(); break;
-			case 'moduleError': for (const t of film ? film.tracks : []) for (const c of t.clips) if (c.module === m.module) broken.add(c.id); drawTimeline(); setStatus('A scene did not compile. Your agent will see it.', ''); break;
-			case 'clipError': broken.add(m.clip); drawTimeline(); break;
-			case 'ended': playing = false; break;
+			case 'loaded': S.ready = true; S.lastFilm = ''; pull(); break;
+			case 'ready': refreshElements(); break;
+			case 'frame': S.frame = m.frame; movePlayhead(); if (!S.playing) refreshElements(); break;
+			case 'playing':
+				S.playing = m.playing;
+				$('playIcon').innerHTML = S.playing ? '<path d="M5.5 4h3v12h-3zM11.5 4h3v12h-3z" fill="currentColor"/>' : '<path d="M6 3.8v12.4L16 10z" fill="currentColor"/>';
+				if (S.playing) closePick(); else refreshElements();
+				break;
+			case 'select':
+				S.selectedKeys = m.keys || [];
+				if (m.keys && m.keys.length) {
+					if (S.playing) lakr().pause();
+					S.element = m.keys[0]; S.clip = S.element.split(':')[0];
+					refreshProbe(); openPickFor(S.element); drawRail(); drawInspector(); drawTimeline();
+				} else { S.element = null; closePick(); drawRail(); drawInspector(); drawTimeline(); }
+				break;
+			case 'moduleError': for (const t of S.film ? S.film.tracks : []) for (const c of t.clips) if (c.module === m.module) S.broken.add(c.id); drawTimeline(); setStatus('A scene did not compile. Your agent sees it too.'); break;
+			case 'clipError': S.broken.add(m.clip); drawTimeline(); break;
+			case 'ended': S.playing = false; break;
 		}
 	});
-	$('play').onclick = () => { if (!ready || !film || !total) return; closeComposer(); if (playing) lakr().pause(); else { if (frame >= Math.round(total * fps) - 1) lakr().seek(0); lakr().play(); } };
-	addEventListener('keydown', (e) => {
-		if (e.target.tagName === 'TEXTAREA') return;
-		if (e.code === 'Space') { e.preventDefault(); $('play').click(); }
-		if (e.key === 'ArrowLeft') seekSec(frame / fps - (e.shiftKey ? 1 : 1 / fps));
-		if (e.key === 'ArrowRight') seekSec(frame / fps + (e.shiftKey ? 1 : 1 / fps));
-	});
-	addEventListener('resize', movePlayhead);
+	player.addEventListener('load', () => { if (!S.ready && lakr()) { S.ready = true; S.lastFilm = ''; pull(); } });
 
-	// ── live: every change the agent makes ──
+	// ── keys ──
+	addEventListener('keydown', (e) => {
+		if (/TEXTAREA|INPUT|SELECT/.test(e.target.tagName)) return;
+		const mod = e.metaKey || e.ctrlKey;
+		if (e.code === 'Space') { e.preventDefault(); $('play').click(); }
+		else if (e.key === 'ArrowLeft') seek(S.frame / S.fps - (e.shiftKey ? 1 : 1 / S.fps));
+		else if (e.key === 'ArrowRight') seek(S.frame / S.fps + (e.shiftKey ? 1 : 1 / S.fps));
+		else if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); (e.shiftKey ? $('redo') : $('undo')).click(); }
+		else if ((e.key === 'Backspace' || e.key === 'Delete') && S.clip && !S.element) $('del').click();
+		else if (e.key === 'Escape') { if (!$('pick').hidden) closePick(); else if (S.element) { deselect(); drawRail(); drawInspector(); drawTimeline(); } }
+		else if (e.key.toLowerCase() === 'f' && !mod) { $('body').classList.remove('film-closed'); $('film').hidden = false; }
+	});
+
+	// ── top bar ──
+	$('export').onclick = async () => { await post('/api/render', { scale: 1 }); toast('Exporting the film…'); setTimeout(pull, 400); };
+	$('back').onclick = (e) => {
+		e.stopPropagation();
+		const m = $('filmsMenu'), films = S.snap?.films || [];
+		m.innerHTML = '<div class="cap">Films in this project</div>' + (films.length ? films.map((f) => `<button data-slug="${esc(f)}">${esc(f)}${f === S.snap?.slug ? ' ✓' : ''}</button>`).join('') : '<div class="cap">None yet</div>');
+		m.hidden = !m.hidden;
+	};
+	$('filmsMenu').onclick = async (e) => { const b = e.target.closest('button'); if (!b) return; await post('/api/use', { slug: b.dataset.slug }); $('filmsMenu').hidden = true; S.clip = null; deselect(); pull(); };
+	addEventListener('click', (e) => { if (!e.target.closest('#filmsMenu') && !e.target.closest('#back')) $('filmsMenu').hidden = true; });
+
+	// ── live ──
 	function connect() {
 		const es = new EventSource('/api/events');
-		es.onopen = () => setStatus('Live, following your agent', 'live');
+		es.onopen = () => setStatus('Live');
 		es.addEventListener('film', () => pull());
-		es.addEventListener('status', (e) => { const d = JSON.parse(e.data); setStatus(d.words, /…$/.test(d.words) ? 'busy' : 'live'); });
-		es.onerror = () => setStatus('Your agent\'s Lakr session ended. This tab reconnects when it\'s back.', '');
+		es.addEventListener('status', (e) => setStatus(JSON.parse(e.data).words));
+		es.onerror = () => setStatus('Reconnecting to your agent');
 	}
-	// in case the player said 'loaded' before this page was listening
-	player.addEventListener('load', () => { if (!ready && lakr()) { ready = true; lastFilm = ''; pull(); } });
-	connect();
-	pull();
+	drawRail(); drawInspector(); connect(); pull();
 })();
 </script>
 </body>

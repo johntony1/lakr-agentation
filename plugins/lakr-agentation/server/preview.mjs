@@ -5,10 +5,11 @@
 //
 // The same server feeds the headless Chrome the agent's stills, checks and renders come from (chrome.mjs).
 import { spawn } from 'node:child_process';
-import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs';
+import { createReadStream, existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import * as store from './film.mjs';
+import { agentName } from './mcp.mjs';
 import { ROOT } from './paths.mjs';
 
 const TYPES = {
@@ -95,11 +96,27 @@ export function snapshot() {
 		film: store.playable(f.film, base),
 		duration: store.duration(f.film),
 		brief: f.meta.summary ?? null,
+		fullBrief: f.meta.brief ?? null,
 		notes: f.meta.notes.filter((n) => n.state !== 'done').slice(-30),
 		renders: f.meta.renders ?? [],
+		chat: (f.meta.chat ?? []).slice(-80),
+		turn: (() => {
+			const h = store.history(f);
+			return { lines: h.turn?.lines ?? [], open: !!h.turn, canUndo: h.past.length > 0, canRedo: h.future.length > 0 };
+		})(),
+		agent: agentName(),
+		films: store.listFilms(),
+		render: renderStatus?.() ?? null,
 		version: store.filmVersion(),
 	};
 }
+
+let renderStatus = null;
+let renderStart = null;
+import('./render.mjs').then((m) => {
+	renderStatus = m.status;
+	renderStart = m.render;
+});
 
 function handle(req, res) {
 	const url = new URL(req.url, 'http://x');
@@ -129,7 +146,80 @@ function handle(req, res) {
 		const file = inside(dir, p.replace(/^\/(media|renders)\//, ''));
 		return file ? serveFile(req, res, file) : send(res, 403, 'forbidden');
 	}
+	if (p === '/preview/fonts.css') {
+		// Inter, from the player's own bundle (hashed file names): the editor's type
+		let css = '';
+		try {
+			for (const f of readdirSync(path.join(ROOT, 'player', 'assets'))) {
+				const m = f.match(/^inter-latin-(\d{3})-normal-.*\.woff2$/);
+				if (m) css += `@font-face{font-family:"Inter";font-weight:${m[1]};font-style:normal;font-display:swap;src:url(/player/assets/${f}) format("woff2")}\n`;
+			}
+		} catch {}
+		return send(res, 200, css, 'text/css; charset=utf-8');
+	}
 	if (p === '/api/film') return json(res, snapshot());
+	if (req.method === 'POST' && p.startsWith('/api/') && req.headers['content-type']?.split(';')[0] !== 'application/json') return send(res, 415, 'json only');
+	if (req.method === 'POST' && ['/api/undo', '/api/redo', '/api/turn', '/api/look', '/api/clip', '/api/remove', '/api/render', '/api/use'].includes(p)) {
+		return readBody(req)
+			.then(async (b) => {
+				if (p === '/api/use') {
+					store.use(String(b.slug ?? ''));
+					return json(res, { ok: true });
+				}
+				const f = store.open();
+				if (p === '/api/undo') return json(res, { ok: store.undo(f) });
+				if (p === '/api/redo') return json(res, { ok: store.redo(f) });
+				if (p === '/api/turn') {
+					const turn = store.settleTurn(f, !!b.keep);
+					if (turn && !b.keep) {
+						const g = store.open();
+						const what = turn.lines.length ? turn.lines.join('; ') : 'the last changes';
+						g.meta.notes.push({ id: `n${Date.now().toString(36)}`, words: `I undid your last changes (${what}). Ask me what to do instead, or try another way.`, element: null, clip: null, atSec: null, state: 'new', at: new Date().toISOString() });
+						store.chat(g, 'maker', 'Undid your changes', 'act');
+						store.save(g, 'note', { record: false });
+					}
+					return json(res, { ok: !!turn });
+				}
+				if (p === '/api/render') {
+					if (!renderStart) return json(res, { error: 'not ready' }, 503);
+					renderStart({ scale: [0.5, 1].includes(b.scale) ? b.scale : 1, wait: 0, allow_pending: true }).catch(() => {});
+					return json(res, { ok: true });
+				}
+				const at = store.findClip(f.film, String(b.clip ?? ''));
+				if (!at) return json(res, { error: 'no such clip' }, 404);
+				if (p === '/api/remove') {
+					const [c] = f.film.tracks[at.track].clips.splice(at.index, 1);
+					if (c.module && !f.film.tracks.some((t) => t.clips.some((x) => x.module === c.module))) delete f.film.modules[c.module];
+					store.chat(f, 'maker', `Deleted “${c.name ?? c.id}”`, 'act');
+					store.save(f, 'maker', { by: 'maker' });
+					return json(res, { ok: true });
+				}
+				if (p === '/api/clip') {
+					if (typeof b.volume === 'number') at.clip.volume = Math.max(0, Math.min(2, b.volume));
+					if (typeof b.name === 'string' && b.name.trim()) at.clip.name = b.name.trim().slice(0, 80);
+					store.save(f, 'maker', { by: 'maker' });
+					return json(res, { ok: true });
+				}
+				// /api/look: the inspector paints an element's font / size / weight / colour / tracking (elements.<el>.look)
+				const el = String(b.element ?? '').split(':').slice(1).join(':') || String(b.element ?? '');
+				if (!el) return json(res, { error: 'element' }, 400);
+				const clip = at.clip;
+				clip.elements ??= {};
+				const cur = { ...(clip.elements[el]?.look ?? {}) };
+				for (const [k, v] of Object.entries(b.look ?? {})) {
+					if (!['font', 'size', 'weight', 'color', 'tracking'].includes(k)) continue;
+					if (v === null || v === '') delete cur[k];
+					else cur[k] = String(v).slice(0, 60);
+				}
+				clip.elements[el] = { ...(clip.elements[el] ?? {}), look: cur };
+				if (!Object.keys(cur).length) delete clip.elements[el].look;
+				if (!Object.keys(clip.elements[el]).length) delete clip.elements[el];
+				if (!Object.keys(clip.elements).length) delete clip.elements;
+				store.save(f, 'look', { by: 'maker' });
+				return json(res, { ok: true });
+			})
+			.catch((e) => json(res, { error: String(e?.message ?? e) }, 400));
+	}
 	if (p === '/api/events') {
 		res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-store', connection: 'keep-alive' });
 		res.write('retry: 1000\n\n');
@@ -138,7 +228,6 @@ function handle(req, res) {
 		return;
 	}
 	if (p === '/api/notes' && req.method === 'POST') {
-		if (req.headers['content-type']?.split(';')[0] !== 'application/json') return send(res, 415, 'json only');
 		return readBody(req)
 			.then((b) => {
 				const words = String(b.words ?? '').trim().slice(0, 2000);
@@ -156,7 +245,8 @@ function handle(req, res) {
 					at: new Date().toISOString(),
 				};
 				f.meta.notes.push(note);
-				store.save(f, 'note');
+				store.chat(f, 'maker', note.element ? `${note.element}: ${words}` : words, 'note');
+				store.save(f, 'note', { record: false });
 				json(res, note);
 			})
 			.catch(() => json(res, { error: 'bad request' }, 400));
