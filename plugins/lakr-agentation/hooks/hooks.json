@@ -1,0 +1,31 @@
+{
+	"description": "Lakr preview: a note sent from the preview tab reaches the agent at once, even between turns.",
+	"hooks": {
+		"SessionStart": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "node \"${CLAUDE_PLUGIN_ROOT}/server/wake.mjs\" start",
+						"async": true,
+						"asyncRewake": true,
+						"timeout": 86400
+					}
+				]
+			}
+		],
+		"Stop": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "node \"${CLAUDE_PLUGIN_ROOT}/server/wake.mjs\" stop",
+						"async": true,
+						"asyncRewake": true,
+						"timeout": 86400
+					}
+				]
+			}
+		]
+	}
+}

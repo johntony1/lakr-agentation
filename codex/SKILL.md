@@ -55,10 +55,11 @@ library of 2,177 studied launch films and 455 motion pieces, the player, the che
 
 ## Editing
 
-- **Listen to the preview.** When the film is playing in the maker's tab and you've finished a step, call `lakr_wait`:
-  it returns the moment they type in the Film column, press a chip, or click an element and ask for a change. Do
-  what they asked (changing only what they pointed at), say what you did with `lakr_say`, then `lakr_wait` again.
-  Keep listening until they talk to you in this chat instead.
+- **The preview talks to you.** What the maker sends from the preview (the Film column, a chip, an element they
+  clicked and asked to change) reaches you by itself. In Claude Code it arrives as a message that starts your next
+  turn, even after you've finished: just do it. Elsewhere (Codex), call `lakr_wait` when you finish a step; it returns
+  the moment they send something. Either way: do what they asked (changing only what they pointed at), say what you
+  did with `lakr_say`, and never tell the maker to come back here to "apply" their notes.
 - **Notes from the preview.** The maker pauses the film, clicks an element and types what should change. Call
   `lakr_notes` when they say they left notes (or "apply my notes"). Each note names the clip, the element
   (`<clip>:<name>`), the moment and their words.
@@ -85,4 +86,4 @@ Films live in `lakr-films/<name>/` in the project: `film.json` (the timeline: tr
 `media/` (assets), `renders/` (MP4s). The maker can commit them. Never write `film.json` by hand — use the tools,
 which validate, play and show it.
 
-Pass `skill_version: "0.1.3"` to `lakr_guide`.
+Pass `skill_version: "0.1.4"` to `lakr_guide`.

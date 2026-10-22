@@ -10,7 +10,7 @@ import http from 'node:http';
 import path from 'node:path';
 import * as store from './film.mjs';
 import { agentName } from './mcp.mjs';
-import { ROOT } from './paths.mjs';
+import { DATA, ROOT } from './paths.mjs';
 
 const TYPES = {
 	'.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8',
@@ -269,11 +269,39 @@ const broadcast = (event, data) => {
 };
 store.events.on('film', (e) => broadcast('film', e));
 store.events.on('status', (e) => broadcast('status', e));
-let listening = false;
+// The agent hears the preview when it is waiting in lakr_wait, or (Claude Code) when the plugin's wake hook is armed
+// for this project: that one starts a turn by itself as soon as a note is sent (wake.mjs).
+let listening = false, waiting = false;
+const alive = (pid) => {
+	try {
+		process.kill(pid, 0);
+		return true;
+	} catch (e) {
+		return e.code === 'EPERM';
+	}
+};
+export function hookArmed() {
+	const dir = path.join(DATA, 'wake'), here = path.resolve(process.env.LAKR_PROJECT || process.cwd());
+	if (!existsSync(dir)) return false;
+	return readdirSync(dir).some((f) => {
+		if (!f.endsWith('.json') || f === 'announced.json') return false;
+		try {
+			const w = JSON.parse(readFileSync(path.join(dir, f), 'utf8'));
+			return path.resolve(w.project) === here && alive(w.pid);
+		} catch {
+			return false;
+		}
+	});
+}
+const relisten = () => {
+	const on = waiting || hookArmed();
+	if (on !== listening) broadcast('listening', { on: (listening = on) });
+};
 store.events.on('waiting', (e) => {
-	listening = !!e.on;
-	broadcast('listening', { on: listening });
+	waiting = !!e.on;
+	relisten();
 });
+setInterval(relisten, 2000).unref();
 setInterval(() => broadcast('ping', {}), 25_000).unref();
 
 /** Start (once) and return the base URL. Tries a stable port first so a reopened tab finds it again. */

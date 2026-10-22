@@ -243,7 +243,7 @@ const tools = [
 			const base = await preview.start();
 			const opened = (a.reopen || !preview.tabsOpen()) && preview.openInBrowser(base + '/');
 			return [
-				text(`Preview: ${base}/ — ${opened ? 'opened in the maker\'s browser' : preview.tabsOpen() ? 'already open in a tab' : 'open this link in a browser'}. It shows the current film live; tell the maker they can pause, click anything and type a change, then ask you to apply their notes.`),
+				text(`Preview: ${base}/ — ${opened ? 'opened in the maker\'s browser' : preview.tabsOpen() ? 'already open in a tab' : 'open this link in a browser'}. It shows the current film live; tell the maker they can pause, click anything and type a change${preview.hookArmed() ? ', and it reaches you by itself the moment they press Send (no need to come back here)' : ', and it reaches you while you listen with lakr_wait (or when they ask you to apply their notes)'}.`),
 				{ type: 'resource_link', uri: `${base}/`, name: 'Lakr preview', mimeType: 'text/html', description: 'The live film and its timeline' },
 			];
 		},
@@ -263,7 +263,7 @@ const tools = [
 	},
 	{
 		name: 'lakr_wait', where: LOCAL,
-		description: "Wait for the maker to direct the film from the preview tab: what they type in the Film column, a chip they press, or an element they click and ask to change. Returns their words as soon as they send something (up to `seconds`, default 45). When you finish a step and the maker is watching the preview, call this and act on what comes back; if nothing came, call it again, until they say stop or talk to you here.",
+		description: "Wait for the maker to direct the film from the preview tab: what they type in the Film column, a chip they press, or an element they click and ask to change. Returns their words as soon as they send something (up to `seconds`, default 45). When you finish a step and the maker is watching the preview, call this and act on what comes back; if nothing came, call it again, until they say stop or talk to you here. (In Claude Code the plugin delivers what they send by itself, between turns too: there you need not wait.)",
 		inputSchema: obj({ seconds: { type: 'number', description: 'how long to wait in this call (max 55)' } }),
 		run: async (a) => {
 			const until = Date.now() + Math.min(55, Math.max(1, Number(a.seconds) || 45)) * 1000;
