@@ -46,7 +46,8 @@ library of 2,177 studied launch films and 455 motion pieces, the player, the che
    whole film as cards before any code exists.
 8. For each scene, in order: write its module, `lakr_put_clip` it, read the stills and the reply, fix, move on.
 9. Assets: `lakr_add_media` brings in a screenshot, logo, recording or sound the maker gave you (a file they named or
-   a URL). If you need a picture they didn't give, ask for it or find it on their site, never on their disk.
+   a URL). If you need a picture they didn't give, ask for it or find it on their site, never on their disk. Their
+   logo goes in with kind "logo": then `<BrandMark size>` draws that exact file in any scene (never as an image clip).
 10. Sound (cloud, needs `lakr_sign_in` once): `lakr_sounds` → `lakr_add_sound` on the beats; `lakr_add_music` for a
     bed at the film's tempo.
 11. `lakr_check` → fix → check (≤ 3 rounds). Then `lakr_render` (call again while it says "Rendering").

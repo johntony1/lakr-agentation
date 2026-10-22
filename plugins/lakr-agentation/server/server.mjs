@@ -307,11 +307,11 @@ const tools = [
 	},
 	{
 		name: 'lakr_add_media', where: LOCAL,
-		description: "Bring a file the maker gave you (a path they named, or a URL) into the film. Never go looking on their disk for one — a screenshot, logo, product recording, voice or sound — and place it as a clip. Pictures and recordings go full-frame on their own track unless you say `track`; scene code can show a still by its `src` too.",
+		description: "Bring a file the maker gave you (a path they named, or a URL) into the film. Never go looking on their disk for one — a screenshot, logo, product recording, voice or sound — and place it as a clip. Pictures and recordings go full-frame on their own track unless you say `track`; scene code can show a still by its `src` too. The maker's LOGO: kind \"logo\" makes it the film's logo (no clip), and `<BrandMark size>` in any scene then draws that exact file at that height.",
 		inputSchema: obj({
 			path: { type: 'string', description: 'a file in the project (relative or absolute)' },
 			url: { type: 'string', description: 'or an https URL to fetch' },
-			kind: { type: 'string', enum: ['image', 'recording', 'audio'], description: 'what it is (guessed from the extension if left out)' },
+			kind: { type: 'string', enum: ['image', 'recording', 'audio', 'logo'], description: 'what it is (guessed from the extension if left out); logo = the brand mark <BrandMark> draws' },
 			id: { type: 'string', description: 'clip id (default from the file name)' },
 			name: { type: 'string' }, start: { type: 'number' }, seconds: { type: 'number' }, track: { type: 'string' },
 			volume: { type: 'number', description: '0..1 for sound' }, place: { type: 'boolean', description: 'false = copy into media/ only, no clip' },
@@ -336,6 +336,14 @@ const tools = [
 			}
 			const ext = path.extname(name).toLowerCase();
 			const kind = a.kind ?? (['.mp4', '.mov', '.webm', '.m4v'].includes(ext) ? 'recording' : ['.wav', '.mp3', '.m4a', '.aac', '.ogg'].includes(ext) ? 'audio' : 'image');
+			if (kind === 'logo') {
+				const size = media.imageSize(path.join(f.dir, 'media', name));
+				f.film.logo = name;
+				f.film.look = { ...(f.film.look ?? {}), logo: { ...(f.film.look?.logo ?? {}), ...(size ? { aspect: +(size.w / size.h).toFixed(4) } : {}) } };
+				store.chat(f, 'agent', 'Added the logo', 'act');
+				store.save(f, 'media', { line: 'Added the logo' });
+				return `The film's logo is now media/${name}${size ? ` (${size.w}×${size.h})` : ''}. Show it with <BrandMark size={height in px} /> from @lakr/kit in any scene: it draws this exact file, never redrawn.`;
+			}
 			if (a.place === false) return `Copied to media/${name} — use src "${name}".`;
 			let secs = num(a.seconds);
 			if (!secs && kind !== 'image' && media.ffmpeg()) secs = (await media.seconds(path.join(f.dir, 'media', name))) || undefined;

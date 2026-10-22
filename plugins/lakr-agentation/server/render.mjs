@@ -109,10 +109,12 @@ export async function render(args) {
 				const g = store.open(j.slug);
 				g.meta.renders = [{ file: path.relative(g.dir, j.file), at: new Date().toISOString(), seconds: store.duration(g.film), scale }, ...(g.meta.renders ?? [])].slice(0, 10);
 				store.save(g, 'render');
+				store.say(j.slug, `Rendered ${path.basename(j.file)}`);
 			})
 			.catch((e) => {
 				j.done = true;
 				j.error = e;
+				store.say(j.slug, j.cancelled ? 'Render stopped' : 'The render failed');
 			});
 		job = j;
 		store.say(f.slug, 'Rendering the film…');

@@ -109,3 +109,33 @@ export async function cached(url, file) {
 		return null;
 	}
 }
+
+/** A picture's pixel size from its header (PNG, JPEG, GIF, WebP, SVG), with nothing installed; null when unknown. */
+export function imageSize(file) {
+	let b;
+	try { b = readFileSync(file); } catch { return null; }
+	if (b.length > 24 && b.readUInt32BE(0) === 0x89504e47) return { w: b.readUInt32BE(16), h: b.readUInt32BE(20) };
+	if (b.length > 10 && b.toString('ascii', 0, 3) === 'GIF') return { w: b.readUInt16LE(6), h: b.readUInt16LE(8) };
+	if (b.length > 30 && b.toString('ascii', 0, 4) === 'RIFF' && b.toString('ascii', 8, 12) === 'WEBP') {
+		const t = b.toString('ascii', 12, 16);
+		if (t === 'VP8X') return { w: 1 + b.readUIntLE(24, 3), h: 1 + b.readUIntLE(27, 3) };
+		if (t === 'VP8 ') return { w: b.readUInt16LE(26) & 0x3fff, h: b.readUInt16LE(28) & 0x3fff };
+		if (t === 'VP8L') { const v = b.readUInt32LE(21); return { w: 1 + (v & 0x3fff), h: 1 + ((v >> 14) & 0x3fff) }; }
+	}
+	if (b.length > 4 && b[0] === 0xff && b[1] === 0xd8) {
+		for (let i = 2; i + 9 < b.length;) {
+			if (b[i] !== 0xff) { i++; continue; }
+			const m = b[i + 1], len = b.readUInt16BE(i + 2);
+			if (m >= 0xc0 && m <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(m)) return { w: b.readUInt16BE(i + 7), h: b.readUInt16BE(i + 5) };
+			i += 2 + len;
+		}
+	}
+	const head = b.toString('utf8', 0, Math.min(b.length, 4096));
+	if (/<svg[\s>]/i.test(head)) {
+		const vb = head.match(/viewBox=["']\s*[-\d.]+[\s,]+[-\d.]+[\s,]+([\d.]+)[\s,]+([\d.]+)/i);
+		if (vb) return { w: +vb[1], h: +vb[2] };
+		const w = head.match(/<svg[^>]*\swidth=["']([\d.]+)/i), h = head.match(/<svg[^>]*\sheight=["']([\d.]+)/i);
+		if (w && h) return { w: +w[1], h: +h[1] };
+	}
+	return null;
+}
