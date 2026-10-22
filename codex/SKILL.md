@@ -84,4 +84,4 @@ Films live in `lakr-films/<name>/` in the project: `film.json` (the timeline: tr
 `media/` (assets), `renders/` (MP4s). The maker can commit them. Never write `film.json` by hand — use the tools,
 which validate, play and show it.
 
-Pass `skill_version: "0.1.2"` to `lakr_guide`.
+Pass `skill_version: "0.1.3"` to `lakr_guide`.

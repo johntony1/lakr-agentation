@@ -1,7 +1,7 @@
 {
 	"name": "lakr-agentation",
 	"displayName": "Lakr Agentation",
-	"version": "0.1.2",
+	"version": "0.1.3",
 	"description": "Make launch films, product demos and motion pieces with Lakr from inside your agent: storyboard, write scenes against the Lakr kit, watch them build live in a browser preview, click anything to change it, render the MP4.",
 	"author": {
 		"name": "Lakr",
