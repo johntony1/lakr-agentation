@@ -1,4 +1,4 @@
-# Lakr Agentation 0.1.4
+# Lakr Agentation 0.1.5
 
 Make launch films, product demos and motion pieces with Lakr from inside your agent: storyboard, write scenes against the Lakr kit, watch them build live in a browser preview, click anything to change it, render the MP4.
 

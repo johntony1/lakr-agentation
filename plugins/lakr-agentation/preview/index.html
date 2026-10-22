@@ -109,7 +109,7 @@ svg { display: block; }
 .player { display: grid; grid-template-rows: 1fr 46px; min-width: 0; min-height: 0; }
 .stage { background: var(--stage); position: relative; min-height: 0; display: grid; place-items: center; padding: 12px; }
 .frame { position: relative; overflow: hidden; border-radius: 4px; }
-.frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; background: transparent; }
+.frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; background: transparent; color-scheme: dark; } /* the player page is dark-scheme: a matching iframe stays see-through (a mismatch gets an opaque backdrop in Chrome) */
 .waiting { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; color: var(--soft); padding: 24px; line-height: 1.6; }
 .waiting b { display: block; color: var(--text); font-weight: 600; font-size: 15px; margin-bottom: 2px; }
 .transport { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0 16px; border-top: 1px solid var(--stroke); }
@@ -278,6 +278,36 @@ body { font-weight: 400; font-size: 13px; line-height: 1.5; }
 .menu button { font-weight: 400; font-size: 13px; }
 .menu .cap { font-weight: 400; font-size: 11px; }
 .rail button::after { font-weight: 500; font-size: 12px; }
+
+/* ── light appearance: the same PL / Ed tokens' light values (ProlineTheme.swift, EditorChrome.swift); the preview
+   follows the system appearance as the Mac app does. ── */
+@media (prefers-color-scheme: light) {
+	:root {
+		--panel: #FFFFFF; --stage: #EBEBEB; --well: #F5F5F5; --raised: #FFFFFF; --stroke: #EBEBEB; --stroke-hi: #E1E1E1;
+		--text: #171717; --sub: #5C5C5C; --soft: #A3A3A3; --bad: #C42B31; --good: #2C8F45;
+		--slider-track: #F7F7F7; --slider-fill: #EBEBEB; --selection: #F5F5F5; --raised-high: #FFFFFF; --ring: rgba(0,0,0,.08);
+		color-scheme: light;
+	}
+	.btn:disabled { background: var(--well); color: var(--soft); }
+	.slider .knob, .zoomer .knob { box-shadow: 0 1px 3px rgba(0,0,0,.22), 0 0 0 .5px rgba(0,0,0,.12); }
+	.pick { border-color: rgba(0,0,0,.119); box-shadow: 0 8px 36px rgba(0,0,0,.12); }
+	.composer { border-color: rgba(0,0,0,.051); }
+	.composer:focus-within { border-color: rgba(0,0,0,.119); }
+	.lane:hover { border-color: #D0D0D0; }
+	.piece { background: rgba(225,102,20,.13); }
+	.piece::before, .piece::after { background: rgba(255,255,255,.9); }
+	.piece.sound .name { color: #B84E0C; }
+	.piece.media { background: var(--well); }
+	@keyframes land { from { background: rgba(225,102,20,.4); } }
+	.elrow.on { background: rgba(225,102,20,.1); }
+	.icon-btn:hover:not(:disabled), .controls button:hover { background: var(--well); }
+	.toast { box-shadow: 0 8px 24px rgba(0,0,0,.1); }
+	.menu { box-shadow: 0 16px 40px rgba(0,0,0,.12); }
+	.rail button::after { box-shadow: 0 2px 6px rgba(0,0,0,.08); }
+	.changes { background: #FFFFFF; }
+	.msg.me { background: var(--well); border-color: transparent; }
+	.chips button { background: #FFFFFF; }
+}
 </style>
 </head>
 <body>
