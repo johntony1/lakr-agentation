@@ -4,7 +4,7 @@ description: "Make or edit a video with Lakr — a launch film, product demo, fe
 license: Proprietary (Lakr). Bundled HyperFrames pieces are Apache-2.0.
 compatibility: Claude Code with the Lakr Agentation plugin (its lakr MCP server). Node 22+, Chrome or another Chromium, ffmpeg for renders.
 metadata:
-  version: "0.1.5"
+  version: "0.1.6"
 ---
 
 # Lakr Agentation — make films from inside your agent
@@ -90,4 +90,4 @@ Films live in `lakr-films/<name>/` in the project: `film.json` (the timeline: tr
 `media/` (assets), `renders/` (MP4s). The maker can commit them. Never write `film.json` by hand — use the tools,
 which validate, play and show it.
 
-Pass `skill_version: "0.1.5"` to `lakr_guide`.
+Pass `skill_version: "0.1.6"` to `lakr_guide`.

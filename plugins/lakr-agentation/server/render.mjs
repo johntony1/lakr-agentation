@@ -13,6 +13,7 @@ import * as store from './film.mjs';
 import * as media from './media.mjs';
 import { ToolError } from './mcp.mjs';
 import * as stage from './stage.mjs';
+import * as telemetry from './telemetry.mjs';
 
 let job = null; // {key, file, frame, total, done, error, startedAt, promise}
 
@@ -110,6 +111,7 @@ export async function render(args) {
 				g.meta.renders = [{ file: path.relative(g.dir, j.file), at: new Date().toISOString(), seconds: store.duration(g.film), scale }, ...(g.meta.renders ?? [])].slice(0, 10);
 				store.save(g, 'render');
 				store.say(j.slug, `Rendered ${path.basename(j.file)}`);
+				telemetry.ping('render');
 			})
 			.catch((e) => {
 				j.done = true;

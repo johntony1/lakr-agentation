@@ -11,7 +11,7 @@ export const client = { name: '' };
 export const agentName = () => (/codex/i.test(client.name) ? 'Codex' : /claude/i.test(client.name) ? 'Claude' : 'Your agent');
 
 /** tools: [{name, description, inputSchema, run(args, ctx) → content[] | string}] */
-export function serve({ name, version, instructions, tools }) {
+export function serve({ name, version, instructions, tools, onInitialize }) {
 	const byName = new Map(tools.map((t) => [t.name, t]));
 	const write = (msg) => process.stdout.write(JSON.stringify(msg) + '\n');
 	const log = (...a) => process.stderr.write('[lakr] ' + a.join(' ') + '\n');
@@ -26,6 +26,7 @@ export function serve({ name, version, instructions, tools }) {
 				case 'initialize': {
 					const asked = params?.protocolVersion;
 					client.name = String(params?.clientInfo?.name ?? '');
+					onInitialize?.();
 					return reply({
 						protocolVersion: VERSIONS.includes(asked) ? asked : VERSIONS[0],
 						// claude/channel: Claude Code (started with --channels / the dev-channels flag) lets this server

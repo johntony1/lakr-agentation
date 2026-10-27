@@ -9,4 +9,4 @@ export const ROOT = path.resolve(process.env.LAKR_ROOT || path.join(path.dirname
 /** Persistent per-user state (sign-in, caches): Claude Code's plugin data dir when it gives one, else ~/.lakr. */
 export const DATA = path.resolve(process.env.LAKR_DATA || process.env.CLAUDE_PLUGIN_DATA || path.join(os.homedir(), '.lakr'));
 
-export const VERSION = '0.1.5';
+export const VERSION = '0.1.6';

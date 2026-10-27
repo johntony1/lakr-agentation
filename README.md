@@ -1,4 +1,4 @@
-# Lakr Agentation 0.1.5
+# Lakr Agentation 0.1.6
 
 Make launch films, product demos and motion pieces with Lakr from inside your agent: storyboard, write scenes against the Lakr kit, watch them build live in a browser preview, click anything to change it, render the MP4.
 
@@ -23,6 +23,12 @@ approve each Lakr tool the first time.
 
 Node 22+ · Chrome (or Chromium, Edge, Brave) for stills, checks and renders · ffmpeg for renders and the library's
 frames. Sounds and music use your Lakr account: the first time, the agent opens your browser to sign in.
+
+## Usage counts
+
+So we know how many people use it, the server sends an anonymous ping when it starts, when a film is started and
+when a render finishes: a random install id, the version, the event, and whether it runs in Claude Code or Codex.
+Nothing about you, your project, your prompts or your films. Set `LAKR_TELEMETRY=0` (or `DO_NOT_TRACK=1`) to turn it off.
 
 ## What's inside
 

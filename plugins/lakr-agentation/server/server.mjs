@@ -13,6 +13,7 @@ import { ROOT, VERSION } from './paths.mjs';
 import * as preview from './preview.mjs';
 import * as render from './render.mjs';
 import * as stage from './stage.mjs';
+import * as telemetry from './telemetry.mjs';
 
 const [major] = process.versions.node.split('.').map(Number);
 if (major < 22) {
@@ -78,6 +79,7 @@ const tools = [
 		}, ['name']),
 		run: (a) => {
 			const f = store.newFilm(a);
+			telemetry.ping('film');
 			return `Started “${f.meta.name}” (${f.film.width}×${f.film.height}, ${f.film.fps} fps) in ${f.dir}. Next: lakr_preview so the maker can watch, then lakr_library → storyboard → lakr_brief.`;
 		},
 	},
@@ -505,4 +507,5 @@ serve({
 		+ 'lakr_put_clip per scene (read its stills) → lakr_check (fix, ≤3 rounds) → lakr_render. Edits: lakr_notes / lakr_wait, change only the element pointed at. '
 		+ 'Material comes only from the maker, the internet and lakr_library: never search their computer or project unless they say where to look.',
 	tools,
+	onInitialize: () => telemetry.ping('start'),
 });
